@@ -1,0 +1,32 @@
+[
+  {
+    "rule": "drop_missing",
+    "reason": "Thiếu userId/movieId/rating/timestamp",
+    "before": 100836,
+    "after": 100836
+  },
+  {
+    "rule": "rating_scale",
+    "reason": "Điểm ngoài thang 0.5-5.0 bước 0.5",
+    "before": 100836,
+    "after": 100836
+  },
+  {
+    "rule": "unknown_movie",
+    "reason": "movieId không có trong movies.csv",
+    "before": 100836,
+    "after": 100836
+  },
+  {
+    "rule": "duplicate_pair",
+    "reason": "Trùng cặp (userId, movieId): giữ đánh giá mới nhất",
+    "before": 100836,
+    "after": 100836
+  },
+  {
+    "rule": "bad_timestamp",
+    "reason": "timestamp <= 0",
+    "before": 100836,
+    "after": 100836
+  }
+]

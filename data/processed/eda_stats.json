@@ -1,0 +1,68 @@
+{
+  "n_ratings": 100836,
+  "n_users": 610,
+  "n_movies_rated": 9724,
+  "n_movies_catalog": 9742,
+  "sparsity": 0.9830003169443864,
+  "rating_mean": 3.501556983616962,
+  "rating_std": 1.042529239060635,
+  "rating_distribution": {
+    "0.5": 1370,
+    "1.0": 2811,
+    "1.5": 1791,
+    "2.0": 7551,
+    "2.5": 5550,
+    "3.0": 20047,
+    "3.5": 13136,
+    "4.0": 26818,
+    "4.5": 8551,
+    "5.0": 13211
+  },
+  "ratings_per_user": {
+    "count": 610.0,
+    "mean": 165.3,
+    "std": 269.48,
+    "min": 20.0,
+    "25%": 35.0,
+    "50%": 70.5,
+    "75%": 168.0,
+    "max": 2698.0
+  },
+  "ratings_per_movie": {
+    "count": 9724.0,
+    "mean": 10.37,
+    "std": 22.4,
+    "min": 1.0,
+    "25%": 1.0,
+    "50%": 3.0,
+    "75%": 9.0,
+    "max": 329.0
+  },
+  "movies_with_1_rating": 3446,
+  "time_range": [
+    "1996-03-29T18:36:55",
+    "2018-09-24T14:27:30"
+  ],
+  "ratings_by_genre": {
+    "Drama": 41928,
+    "Comedy": 39053,
+    "Action": 30635,
+    "Thriller": 26452,
+    "Adventure": 24161,
+    "Romance": 18124,
+    "Sci-Fi": 17243,
+    "Crime": 16681,
+    "Fantasy": 11834,
+    "Children": 9208,
+    "Mystery": 7674,
+    "Horror": 7291,
+    "Animation": 6988,
+    "War": 4859,
+    "IMAX": 4145,
+    "Musical": 4138,
+    "Western": 1930,
+    "Documentary": 1219,
+    "Film-Noir": 870,
+    "(no genres listed)": 47
+  }
+}

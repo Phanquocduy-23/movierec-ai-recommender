@@ -1,0 +1,24 @@
+{
+  "split_version": "per_user_temporal_70_15_15_v1",
+  "source_sha256": "aa289ca83157595d0df6aea1be6a4ded676ddc4385472e8313a8ed9805352646",
+  "clean_sha256": "aa289ca83157595d0df6aea1be6a4ded676ddc4385472e8313a8ed9805352646",
+  "counts": {
+    "train": 70580,
+    "val": 15145,
+    "test": 15111
+  },
+  "overlap_check": {
+    "train&val": 0,
+    "train&test": 0,
+    "val&test": 0
+  },
+  "cold_start": {
+    "val_ratings_item_not_in_train": 1178,
+    "test_ratings_item_not_in_train_val": 1236
+  },
+  "files": {
+    "train": "da499d5b68a59812ae0a37cc5c346e99b11dfe2bf2e5737c6f1e68e3f7a503c8",
+    "val": "ce820f15cbffa1327ac4870b08a6c038a8904ebf70bb771df1ff7d0814c186a5",
+    "test": "8db4ca9e96fd4d31de03bf10e5521d27a92346192d7e78a3219f44fe205c5a7f"
+  }
+}
