@@ -1,0 +1,23 @@
+{
+  "seed": 42,
+  "k": 10,
+  "relevance_threshold": 4.0,
+  "selection": {
+    "popular": "precision@10",
+    "item_knn": "rmse",
+    "svd": "rmse"
+  },
+  "grids": {
+    "popular": [
+      {"m": 5}, {"m": 10}, {"m": 25}, {"m": 50}
+    ],
+    "item_knn": [
+      {"k": 20, "shrink": 0.0}, {"k": 40, "shrink": 0.0}, {"k": 60, "shrink": 0.0},
+      {"k": 20, "shrink": 1.0}, {"k": 40, "shrink": 1.0}, {"k": 60, "shrink": 1.0}
+    ],
+    "svd": [
+      {"n_factors": 20, "n_epochs": 20}, {"n_factors": 50, "n_epochs": 20},
+      {"n_factors": 20, "n_epochs": 40}, {"n_factors": 50, "n_epochs": 40}
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "run_id": "20261109-224136",
+  "quick": true,
+  "seed": 42,
+  "k": 10,
+  "relevance_threshold": 4.0,
+  "chosen": {
+    "popular": {
+      "params": {
+        "m": 5
+      },
+      "selected_by": "precision@10"
+    },
+    "item_knn": {
+      "params": {
+        "k": 20,
+        "shrink": 0.0
+      },
+      "selected_by": "rmse"
+    },
+    "svd": {
+      "params": {
+        "n_factors": 20,
+        "n_epochs": 20
+      },
+      "selected_by": "rmse"
+    }
+  },
+  "protocol": "fit train -> select on val -> refit train+val -> test once",
+  "split": {
+    "split_version": "per_user_temporal_70_15_15_v1",
+    "source_sha256": "aa289ca83157595d0df6aea1be6a4ded676ddc4385472e8313a8ed9805352646",
+    "clean_sha256": "aa289ca83157595d0df6aea1be6a4ded676ddc4385472e8313a8ed9805352646",
+    "counts": {
+      "train": 70580,
+      "val": 15145,
+      "test": 15111
+    },
+    "overlap_check": {
+      "train&val": 0,
+      "train&test": 0,
+      "val&test": 0
+    },
+    "cold_start": {
+      "val_ratings_item_not_in_train": 1178,
+      "test_ratings_item_not_in_train_val": 1236
+    },
+    "files": {
+      "train": "da499d5b68a59812ae0a37cc5c346e99b11dfe2bf2e5737c6f1e68e3f7a503c8",
+      "val": "ce820f15cbffa1327ac4870b08a6c038a8904ebf70bb771df1ff7d0814c186a5",
+      "test": "8db4ca9e96fd4d31de03bf10e5521d27a92346192d7e78a3219f44fe205c5a7f"
+    }
+  },
+  "data_hash": {
+    "train": "da499d5b68a59812ae0a37cc5c346e99b11dfe2bf2e5737c6f1e68e3f7a503c8",
+    "val": "ce820f15cbffa1327ac4870b08a6c038a8904ebf70bb771df1ff7d0814c186a5",
+    "test": "8db4ca9e96fd4d31de03bf10e5521d27a92346192d7e78a3219f44fe205c5a7f"
+  },
+  "libraries": {
+    "python": "3.14.7",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.1",
+    "scikit-surprise": null
+  },
+  "machine": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"
+  },
+  "duration_seconds": 5.5,
+  "test_results": [
+    {
+      "rmse": 0.9743168907283684,
+      "mae": 0.7545394619723834,
+      "n_pairs_eligible": 13875,
+      "n_pairs_total": 15111,
+      "precision@10": 0.01907216494845361,
+      "recall@10": 0.02143801072369412,
+      "n_users_ranked": 582,
+      "n_users_no_relevant": 28,
+      "coverage": 0.004300325430032543,
+      "avg_list_length": 10.0,
+      "n_relevant_not_in_fit": 473,
+      "method": "popular",
+      "params": "{\"m\": 5}",
+      "fit_eval_seconds": 0.13
+    },
+    {
+      "rmse": 0.9719821494972138,
+      "mae": 0.7269839105428038,
+      "n_pairs_eligible": 13875,
+      "n_pairs_total": 15111,
+      "precision@10": 0.016494845360824746,
+      "recall@10": 0.0244715735175911,
+      "n_users_ranked": 582,
+      "n_users_no_relevant": 28,
+      "coverage": 0.19316596931659694,
+      "avg_list_length": 10.0,
+      "n_relevant_not_in_fit": 473,
+      "method": "item_knn",
+      "params": "{\"k\": 20, \"shrink\": 0.0}",
+      "fit_eval_seconds": 1.47
+    },
+    {
+      "rmse": 0.8712684131753935,
+      "mae": 0.6706452232795321,
+      "n_pairs_eligible": 13875,
+      "n_pairs_total": 15111,
+      "precision@10": 0.029381443298969075,
+      "recall@10": 0.027360126621758577,
+      "n_users_ranked": 582,
+      "n_users_no_relevant": 28,
+      "coverage": 0.01906090190609019,
+      "avg_list_length": 10.0,
+      "n_relevant_not_in_fit": 473,
+      "method": "svd",
+      "params": "{\"n_factors\": 20, \"n_epochs\": 20}",
+      "fit_eval_seconds": 0.44
+    }
+  ]
+}
