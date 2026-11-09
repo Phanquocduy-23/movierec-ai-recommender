@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Environment & Secrets (không commit mật khẩu/token thật)
+.env
+backend/.env
+frontend/.env
+
+# Dữ liệu lớn, Database cục bộ & Mô hình nặng (tái tạo bằng script)
+*.db
+*.sqlite
+*.sqlite3
+data/raw/*.zip
+data/raw/ml-latest-small/
+data/uploads/
+data/processed/*.csv
+artifacts/models/
+backups/*.sql
+backups/*.dump
