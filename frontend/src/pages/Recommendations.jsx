@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
-import { cleanTitle, Empty, ErrorBox, Loading, METHOD_LABEL, MovieCard } from '../components/ui'
+import { cleanTitle, Empty, ErrorBox, Loading, METHOD_LABEL, MovieCard, Poster } from '../components/ui'
 
 const OPTIONS = [
   { v: 'auto', label: '🤖 Tự động (Khuyến nghị)', desc: 'Tự động chọn SVD hoặc Item-based KNN tùy trạng thái hồ sơ' },
@@ -18,17 +18,63 @@ export default function Recommendations() {
   const [genreFilter, setGenreFilter] = useState('')
   const [data, setData] = useState(null)
   const [myRatings, setMyRatings] = useState(null)
+  const [genres, setGenres] = useState([])
+  const [pickGenreId, setPickGenreId] = useState('')
+  const [quickMovies, setQuickMovies] = useState([])
+  const [showQuickRate, setShowQuickRate] = useState(false)
+  const [quickMsg, setQuickMsg] = useState('')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    setData(null); setError('')
+  const loadRecs = () => {
+    setError('')
     api(`/api/recommendations?method=${method}&n=${limit}`).then(setData).catch(e => setError(e.message))
-  }, [method, limit, user])
+  }
+
+  const loadMyRatings = () => {
+    if (!user) { setMyRatings(null); return }
+    api('/api/ratings/me?size=100').then(r => {
+      setMyRatings(r)
+      if ((r.total || 0) < 5) setShowQuickRate(true)
+    }).catch(() => {})
+  }
 
   useEffect(() => {
-    if (!user) { setMyRatings(null); return }
-    api('/api/ratings/me?size=100').then(setMyRatings).catch(() => {})
-  }, [user])
+    setData(null)
+    loadRecs()
+  }, [method, limit, user]) // eslint-disable-line
+
+  useEffect(() => {
+    loadMyRatings()
+    api('/api/genres').then(gs => {
+      setGenres(gs)
+      if (gs.length > 0 && !pickGenreId) setPickGenreId(String(gs[0].id))
+    }).catch(() => {})
+  }, [user]) // eslint-disable-line
+
+  useEffect(() => {
+    if (!user || !showQuickRate) return
+    const q = pickGenreId ? `?genre_id=${pickGenreId}&sort=popular&size=12` : `?sort=popular&size=12`
+    api(`/api/movies${q}`).then(res => setQuickMovies(res.items || [])).catch(() => {})
+  }, [user, showQuickRate, pickGenreId])
+
+  const ratedIds = useMemo(() => {
+    return new Set((myRatings?.items || []).map(r => r.movie_id))
+  }, [myRatings])
+
+  const unratedQuickMovies = useMemo(() => {
+    return quickMovies.filter(m => !ratedIds.has(m.id)).slice(0, 6)
+  }, [quickMovies, ratedIds])
+
+  const quickRateMovie = async (movie, score) => {
+    try {
+      await api(`/api/ratings/${movie.id}`, { method: 'PUT', body: { score } })
+      setQuickMsg(`Đã chấm ${score} ★ cho "${cleanTitle(movie.title)}" — Danh sách gợi ý AI đã cập nhật!`)
+      loadMyRatings()
+      loadRecs()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   // Tính thống kê nhanh hồ sơ sở thích của người dùng hiện tại
   const taste = useMemo(() => {
@@ -65,6 +111,15 @@ export default function Recommendations() {
           </p>
         </div>
         <div className="row-actions">
+          {user && (
+            <button
+              type="button"
+              className={`btn sm ${showQuickRate ? '' : 'ghost'}`}
+              onClick={() => setShowQuickRate(v => !v)}
+            >
+              ⚡ {showQuickRate ? 'Ẩn chấm nhanh' : 'Chấm nhanh theo thể loại'}
+            </button>
+          )}
           <select value={limit} onChange={e => setLimit(Number(e.target.value))}>
             <option value={10}>Top 10 phim</option>
             <option value={20}>Top 20 phim</option>
@@ -90,6 +145,58 @@ export default function Recommendations() {
             </div>
           </div>
           <Link to="/my-ratings" className="btn ghost sm">Quản lý điểm đã chấm →</Link>
+        </div>
+      )}
+
+      {/* Khung Khởi tạo nhanh Gu Điện Ảnh (Xử lý Cold-Start trực tiếp) */}
+      {user && showQuickRate && (
+        <div className="card" style={{ marginBottom: 20, border: '1px solid rgba(99, 102, 241, 0.4)' }}>
+          <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+            <div>
+              <h3 style={{ margin: 0 }}>🎯 Khởi tạo nhanh Gu Điện Ảnh (Tương tác xử lý Cold-Start)</h3>
+              <p className="muted small" style={{ margin: '4px 0 0' }}>
+                Chọn thể loại bạn thích và bấm chấm nhanh vài bộ phim quen thuộc — AI sẽ lập tức cá nhân hóa danh sách bên dưới!
+              </p>
+            </div>
+            <span className="tag ok">Đã chấm: {myRatings?.total || 0} phim</span>
+          </div>
+
+          <div className="chips" style={{ marginBottom: 12 }}>
+            {genres.slice(0, 12).map(g => (
+              <button
+                key={g.id}
+                type="button"
+                className={`chip ${String(pickGenreId) === String(g.id) ? 'active' : ''}`}
+                onClick={() => setPickGenreId(String(g.id))}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+
+          {quickMsg && <div className="alert ok" style={{ marginBottom: 12 }}>{quickMsg}</div>}
+
+          <div className="movie-grid">
+            {unratedQuickMovies.map(m => (
+              <div key={m.id} className="movie-card" style={{ paddingBottom: 10 }}>
+                <Link to={`/movies/${m.id}`} className="poster-link">
+                  <Poster movie={m} />
+                </Link>
+                <div className="movie-body">
+                  <Link to={`/movies/${m.id}`} className="movie-title">{cleanTitle(m.title)}</Link>
+                  <div className="movie-meta">
+                    <span>{m.year || '—'}</span>
+                    <span>★ {m.rating_avg ?? '—'}</span>
+                  </div>
+                  <div className="row-actions" style={{ marginTop: 8, gap: 6 }}>
+                    <button type="button" className="btn sm" onClick={() => quickRateMovie(m, 5.0)}>★ 5.0</button>
+                    <button type="button" className="btn ghost sm" onClick={() => quickRateMovie(m, 4.0)}>★ 4.0</button>
+                    <button type="button" className="btn ghost sm" onClick={() => quickRateMovie(m, 3.0)}>★ 3.0</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -5,12 +5,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select, text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .models import Role
+from .models import Rating, Role
 from .routers import admin, auth, movies, ratings, recommendations
 
 logging.basicConfig(level=logging.INFO)
@@ -45,10 +45,26 @@ async def db_error_handler(request: Request, exc: SQLAlchemyError):
 def ensure_roles():
     try:
         Base.metadata.create_all(engine)
+        cols = {c["name"] for c in inspect(engine).get_columns("ratings")}
+        if "comment" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE ratings ADD COLUMN comment TEXT"))
         with SessionLocal() as db:
             for name, desc in (("user", "Người dùng"), ("admin", "Quản trị viên")):
                 if not db.scalar(select(Role).where(Role.name == name)):
                     db.add(Role(name=name, description=desc))
+            # Bổ sung bình luận mẫu cho các tài khoản demo nếu chưa có bình luận nào
+            has_comments = db.scalar(select(Rating.id).where(Rating.comment.is_not(None)).limit(1))
+            if not has_comments:
+                sample_reviews = [
+                    "Kịch bản xuất sắc, nhịp phim cuốn hút từ đầu đến cuối. Rất đáng xem lại nhiều lần!",
+                    "Diễn xuất đỉnh cao và phần âm nhạc cực kỳ cảm xúc. Một trong những bộ phim yêu thích nhất của mình.",
+                    "Cốt truyện sâu sắc, nhiều nút thắt bất ngờ. Hệ thống AI gợi ý phim này quá chuẩn với gu của mình!",
+                    "Kỹ xảo và góc máy tuyệt đẹp, xem giải trí cuối tuần cực kỳ hợp lý.",
+                    "Phim kinh điển không thể bỏ qua, thông điệp nhân văn và giàu ý nghĩa.",
+                ]
+                for idx, r in enumerate(db.scalars(select(Rating).where(Rating.score >= 4.0).limit(20)).all()):
+                    r.comment = sample_reviews[idx % len(sample_reviews)]
             db.commit()
     except SQLAlchemyError:
         log.warning("Chưa tạo được roles - hãy chạy 'alembic upgrade head' trước")

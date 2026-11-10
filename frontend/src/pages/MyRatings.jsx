@@ -40,6 +40,7 @@ export default function MyRatings() {
                 <div className="grow">
                   <Link to={`/movies/${r.movie_id}`} className="movie-title">{r.movie.title}</Link>
                   <div className="muted small">{r.movie.year} · {r.movie.genres.map(g => g.name).join(', ')} · TB cộng đồng {r.movie.rating_avg ?? '–'}</div>
+                  {r.comment && <div className="small" style={{ marginTop: 4, color: '#cbd5e1', fontStyle: 'italic' }}>“{r.comment}”</div>}
                   <div className="muted small">Cập nhật {new Date(r.updated_at + 'Z').toLocaleString('vi-VN')}</div>
                 </div>
                 <StarInput value={r.score} onChange={s => rate(r.movie_id, s)} />

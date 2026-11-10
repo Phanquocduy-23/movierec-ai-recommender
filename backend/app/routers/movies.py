@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_optional_user
 from ..models import Genre, Movie, Rating, User, WatchlistItem
-from ..schemas import GenreOut, MovieDetail, MovieOut
+from ..schemas import GenreOut, MovieDetail, MovieOut, ReviewOut
 from ..services.recommender import similar_movies
 
 router = APIRouter(prefix="/api", tags=["movies"])
@@ -54,10 +54,36 @@ def get_movie(movie_id: int, db: Session = Depends(get_db), user: User | None = 
         raise HTTPException(404, "Không tìm thấy phim")
     out = MovieDetail.model_validate(m)
     if user:
-        out.my_rating = db.scalar(select(Rating.score).where(Rating.user_id == user.id, Rating.movie_id == m.id))
+        r = db.scalar(select(Rating).where(Rating.user_id == user.id, Rating.movie_id == m.id))
+        if r:
+            out.my_rating = r.score
+            out.my_comment = r.comment
         out.in_watchlist = db.scalar(select(WatchlistItem.id).where(
             WatchlistItem.user_id == user.id, WatchlistItem.movie_id == m.id)) is not None
     return out
+
+
+@router.get("/movies/{movie_id}/reviews", response_model=list[ReviewOut])
+def get_movie_reviews(movie_id: int, db: Session = Depends(get_db)):
+    """Danh sách bình luận & đánh giá trên web cho bộ phim (ưu tiên đánh giá có nội dung bình luận)."""
+    rows = db.scalars(
+        select(Rating)
+        .where(Rating.movie_id == movie_id)
+        .order_by(Rating.comment.is_(None).asc(), Rating.updated_at.desc())
+        .limit(50)
+    ).all()
+    return [
+        ReviewOut(
+            id=r.id,
+            user_id=r.user_id,
+            username=r.user.username if r.user else f"user_{r.user_id}",
+            full_name=r.user.full_name if r.user else None,
+            score=r.score,
+            comment=r.comment,
+            updated_at=r.updated_at,
+        )
+        for r in rows
+    ]
 
 
 @router.get("/movies/{movie_id}/similar")

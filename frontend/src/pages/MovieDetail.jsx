@@ -15,6 +15,9 @@ export default function MovieDetail() {
   const [meta, setMeta] = useState(null)
   const [similar, setSimilar] = useState(null)
   const [dist, setDist] = useState([])
+  const [reviews, setReviews] = useState([])
+  const [commentText, setCommentText] = useState('')
+  const [draftScore, setDraftScore] = useState(4.5)
   const [showTrailer, setShowTrailer] = useState(false)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
@@ -23,14 +26,17 @@ export default function MovieDetail() {
   const load = () => {
     api(`/api/movies/${id}`).then(m => {
       setMovie(m)
+      setCommentText(m.my_comment || '')
+      if (m.my_rating != null) setDraftScore(m.my_rating)
       rememberViewed(m)
       const imdbId = extractImdbId(m)
       if (imdbId) fetchCinemeta(imdbId).then(setMeta)
     }).catch(e => setError(e.message))
     api(`/api/movies/${id}/rating-distribution`).then(setDist).catch(() => {})
+    api(`/api/movies/${id}/reviews`).then(setReviews).catch(() => {})
   }
   useEffect(() => {
-    setMovie(null); setMeta(null); setSimilar(null); setMsg(''); setError('')
+    setMovie(null); setMeta(null); setSimilar(null); setReviews([]); setMsg(''); setError('')
     load()
     api(`/api/movies/${id}/similar?n=12`).then(setSimilar).catch(() => {})
   }, [id, user]) // eslint-disable-line
@@ -39,15 +45,40 @@ export default function MovieDetail() {
 
   const rate = async (score) => {
     if (requireLogin()) return
+    setDraftScore(score)
     setBusy(true); setError('')
-    try { await api(`/api/ratings/${id}`, { method: 'PUT', body: { score } }); setMsg(`Đã lưu ${score} điểm! Gợi ý cá nhân hóa của bạn đã được cập nhật.`); load() }
-    catch (e) { setError(e.message) } finally { setBusy(false) }
+    try {
+      await api(`/api/ratings/${id}`, { method: 'PUT', body: { score } })
+      setMsg(`Đã lưu ${score} sao! Gợi ý cá nhân hóa của bạn đã được cập nhật.`)
+      load()
+    } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
+
+  const submitReview = async (e) => {
+    e.preventDefault()
+    if (requireLogin()) return
+    const scoreToSave = movie.my_rating != null ? movie.my_rating : draftScore
+    setBusy(true); setError('')
+    try {
+      await api(`/api/ratings/${id}`, {
+        method: 'PUT',
+        body: { score: scoreToSave, comment: commentText },
+      })
+      setMsg('Đã đăng bình luận & đánh giá của bạn thành công!')
+      load()
+    } catch (err) { setError(err.message) } finally { setBusy(false) }
+  }
+
   const unrate = async () => {
     setBusy(true)
-    try { await api(`/api/ratings/${id}`, { method: 'DELETE' }); setMsg('Đã xóa đánh giá.'); load() }
-    catch (e) { setError(e.message) } finally { setBusy(false) }
+    try {
+      await api(`/api/ratings/${id}`, { method: 'DELETE' })
+      setCommentText('')
+      setMsg('Đã xóa đánh giá & bình luận.')
+      load()
+    } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
+
   const toggleWatch = async () => {
     if (requireLogin()) return
     try {
@@ -193,6 +224,98 @@ export default function MovieDetail() {
           </div>
         </div>
       </div>
+
+      {/* Khu vực Bình luận & Cảm nhận từ Cộng đồng */}
+      <section className="section">
+        <div className="section-head">
+          <h2>💬 Bình luận & Cảm nhận Cộng đồng ({reviews.length})</h2>
+          <span className="muted small">Chia sẻ góc nhìn của bạn về bộ phim này</span>
+        </div>
+
+        <div className="grid2" style={{ alignItems: 'start' }}>
+          <form className="card" onSubmit={submitReview}>
+            <h3 style={{ marginTop: 0 }}>
+              {movie.my_comment ? '✏️ Cập nhật bình luận của bạn' : '✍️ Viết đánh giá & bình luận'}
+            </h3>
+            {user ? (
+              <>
+                <div style={{ marginBottom: 10 }}>
+                  <span className="muted small">Mức điểm chấm kèm bình luận: </span>
+                  <StarInput
+                    value={movie.my_rating != null ? movie.my_rating : draftScore}
+                    onChange={s => setDraftScore(s)}
+                    disabled={busy}
+                  />
+                </div>
+                <textarea
+                  rows={4}
+                  placeholder="Cảm nhận của bạn về cốt truyện, diễn xuất, âm nhạc hay thông điệp của bộ phim..."
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  maxLength={1500}
+                  style={{ width: '100%', marginBottom: 10 }}
+                />
+                <div className="row-actions" style={{ justifyContent: 'space-between' }}>
+                  <span className="muted small">{commentText.length}/1500 ký tự</span>
+                  <button className="btn" disabled={busy}>
+                    {movie.my_rating != null ? 'Lưu cập nhật đánh giá' : 'Đăng đánh giá & bình luận'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="empty" style={{ padding: 20 }}>
+                Bạn cần <Link to="/login"><b>Đăng nhập</b></Link> để chấm điểm và viết bình luận cho bộ phim này.
+              </div>
+            )}
+          </form>
+
+          <div className="list">
+            {reviews.length === 0 ? (
+              <div className="empty">Chưa có bình luận nào trên web cho phim này. Hãy là người đầu tiên chia sẻ cảm nhận!</div>
+            ) : (
+              reviews.map(rv => (
+                <div key={rv.id} className="card" style={{ padding: '14px 16px' }}>
+                  <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div className="row-actions" style={{ gap: 8 }}>
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: '#fff',
+                        }}
+                      >
+                        {(rv.full_name || rv.username || 'U').slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <b>{rv.full_name || rv.username}</b>{' '}
+                        <span className="muted small">@{rv.username}</span>
+                        <div className="muted small">
+                          {new Date(rv.updated_at + 'Z').toLocaleString('vi-VN')}
+                        </div>
+                      </div>
+                    </div>
+                    <Stars value={rv.score} />
+                  </div>
+                  {rv.comment ? (
+                    <p style={{ margin: '6px 0 0', lineHeight: 1.55, color: '#e2e8f0' }}>{rv.comment}</p>
+                  ) : (
+                    <p className="muted small" style={{ margin: '4px 0 0', fontStyle: 'italic' }}>
+                      Đã chấm {rv.score.toFixed(1)} ★ (không kèm nhận xét văn bản)
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="section">
         <div className="section-head">

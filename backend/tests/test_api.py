@@ -130,3 +130,22 @@ def test_training_and_personalization(client, dataset_dir):
     assert client.post(f"/api/admin/models/{old['id']}/activate", headers=admin).json()["status"] == "active"
     sim = client.get(f"/api/movies/{movies['Movie 1']}/similar").json()
     assert sim["source"] == "item_knn" and len(sim["items"]) > 0
+
+
+def test_movie_reviews_and_comments(client):
+    h = register(client, "reviewer")
+    mid = client.get("/api/movies").json()["items"][0]["id"]
+    r = client.put(
+        f"/api/ratings/{mid}",
+        json={"score": 4.5, "comment": "Phim cực hay, diễn xuất ấn tượng!"},
+        headers=h,
+    )
+    assert r.status_code == 200
+    assert r.json()["comment"] == "Phim cực hay, diễn xuất ấn tượng!"
+
+    detail = client.get(f"/api/movies/{mid}", headers=h).json()
+    assert detail["my_rating"] == 4.5
+    assert detail["my_comment"] == "Phim cực hay, diễn xuất ấn tượng!"
+
+    reviews = client.get(f"/api/movies/{mid}/reviews").json()
+    assert any(rv["username"] == "reviewer" and rv["comment"] == "Phim cực hay, diễn xuất ấn tượng!" for rv in reviews)

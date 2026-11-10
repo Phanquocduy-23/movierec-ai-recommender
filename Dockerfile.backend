@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /workspace/backend/requirements.txt
+RUN pip install --no-cache-dir -r /workspace/backend/requirements.txt
+
+COPY recsys /workspace/recsys
+COPY ml /workspace/ml
+COPY backend /workspace/backend
+COPY scripts /workspace/scripts
+
+ENV PYTHONPATH=/workspace:/workspace/backend
+ENV PYTHONUTF8=1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--app-dir", "/workspace/backend", "--host", "0.0.0.0", "--port", "8000"]

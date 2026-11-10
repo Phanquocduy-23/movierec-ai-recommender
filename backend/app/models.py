@@ -110,9 +110,11 @@ class Rating(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), index=True)
     score: Mapped[float] = mapped_column(Float)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     movie: Mapped[Movie] = relationship(lazy="joined")
+    user: Mapped[User] = relationship(lazy="joined")
 
 
 class WatchlistItem(Base):

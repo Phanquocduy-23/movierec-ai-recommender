@@ -118,8 +118,13 @@ def _compute(db, user, profile, requested, n):
             if not fresh:
                 reason += (f" Lưu ý: SVD chỉ phản ánh điểm tới lần huấn luyện {mv.trained_at:%d/%m/%Y %H:%M}; "
                            "điểm mới sẽ được học ở lần huấn luyện sau.")
-            return dict(served="svd", version=version, fallback=False, reason=reason,
-                        items=[(int(i), s, "svd", []) for i, s in recs])
+            return dict(
+                served="svd",
+                version=version,
+                fallback=False,
+                reason=reason,
+                items=[(int(i), s, "svd", [int(j) for j, _ in knn.explain(profile, i)]) for i, s in recs],
+            )
         why = ("Tài khoản chưa có trong mô hình SVD" if not in_model
                else "Bạn đã thay đổi điểm sau lần huấn luyện gần nhất")
         reason = f"{why} - dùng Item-based KNN chấm trực tiếp từ {len(profile)} điểm hiện tại của bạn."

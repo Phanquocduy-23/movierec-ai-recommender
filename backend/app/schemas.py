@@ -64,6 +64,7 @@ class MovieDetail(MovieOut):
     link: MovieLinkOut | None
     is_active: bool
     my_rating: float | None = None
+    my_comment: str | None = None
     in_watchlist: bool = False
 
 
@@ -88,6 +89,7 @@ class Page(BaseModel):
 # ---------------------------------------------------------------- Ratings & watchlist
 class RatingIn(BaseModel):
     score: float
+    comment: str | None = Field(default=None, max_length=1500)
 
     @field_validator("score")
     @classmethod
@@ -100,9 +102,20 @@ class RatingIn(BaseModel):
 class RatingOut(ORM):
     movie_id: int
     score: float
+    comment: str | None = None
     created_at: datetime
     updated_at: datetime
     movie: MovieOut
+
+
+class ReviewOut(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    full_name: str | None = None
+    score: float
+    comment: str | None = None
+    updated_at: datetime
 
 
 class WatchlistIn(BaseModel):

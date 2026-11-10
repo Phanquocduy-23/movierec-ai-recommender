@@ -37,17 +37,25 @@ def my_ratings(page: int = Query(1, ge=1), size: int = Query(50, ge=1, le=200),
 @router.put("/ratings/{movie_id}", response_model=RatingOut)
 def rate_movie(movie_id: int, data: RatingIn, user: User = Depends(get_current_user),
                db: Session = Depends(get_db)):
-    """Tạo mới hoặc sửa điểm - mỗi cặp (người, phim) chỉ có một đánh giá hiện tại."""
+    """Tạo mới hoặc sửa điểm & bình luận - mỗi cặp (người, phim) chỉ có một đánh giá hiện tại."""
     movie = _movie_or_404(db, movie_id)
     r = db.scalar(select(Rating).where(Rating.user_id == user.id, Rating.movie_id == movie_id))
+    cleaned_comment = data.comment.strip() if data.comment is not None else None
     if r is None:
-        r = Rating(user_id=user.id, movie_id=movie_id, score=data.score)
+        r = Rating(
+            user_id=user.id,
+            movie_id=movie_id,
+            score=data.score,
+            comment=cleaned_comment or None,
+        )
         db.add(r)
         movie.rating_count += 1
         movie.rating_sum += data.score
     else:
         movie.rating_sum += data.score - r.score
         r.score = data.score
+        if data.comment is not None:
+            r.comment = cleaned_comment or None
         r.updated_at = utcnow()
     user.ratings_updated_at = utcnow()
     db.commit()
