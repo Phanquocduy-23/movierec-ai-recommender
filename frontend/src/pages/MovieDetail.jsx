@@ -193,6 +193,16 @@ export default function MovieDetail() {
                   <button className={`btn sm ${movie.in_watchlist ? 'ghost' : ''}`} onClick={toggleWatch}>
                     {movie.in_watchlist ? '✓ Đã lưu trong Muốn xem' : '+ Thêm vào Muốn xem'}
                   </button>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(window.location.href)
+                      setMsg('🔗 Đã sao chép đường dẫn bộ phim vào bộ nhớ tạm!')
+                    }}
+                  >
+                    🔗 Chia sẻ
+                  </button>
                 </div>
               </div>
             </div>
@@ -221,6 +231,19 @@ export default function MovieDetail() {
             <p className="muted small" style={{ marginTop: 10 }}>
               Tổng hợp từ dữ liệu MovieLens và đánh giá trực tiếp của người dùng trên hệ thống.
             </p>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(148,163,184,0.18)' }}>
+              <div className="small" style={{ fontWeight: 700, marginBottom: 4 }}>🧮 Điểm Trọng số Bayes (Popularity WR)</div>
+              <div className="muted small" style={{ lineHeight: 1.5 }}>
+                Công thức: <code>WR = (v/(v+m))·R + (m/(v+m))·C</code><br />
+                Với <code>v = {movie.rating_count}</code>, <code>R = {movie.rating_avg ?? 0}</code>, <code>m = 50</code>, <code>C = 3.50</code>:<br />
+                Điểm WR = <b style={{ color: '#f59e0b' }}>
+                  ★ {(
+                    ((movie.rating_count / (movie.rating_count + 50)) * (movie.rating_avg || 3.5)) +
+                    ((50 / (movie.rating_count + 50)) * 3.5)
+                  ).toFixed(3)}
+                </b> / 5.0
+              </div>
+            </div>
           </div>
         </div>
       </div>

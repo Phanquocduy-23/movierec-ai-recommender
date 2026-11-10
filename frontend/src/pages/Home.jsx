@@ -7,6 +7,15 @@ import {
   Loading, METHOD_LABEL, MovieCard, Poster, Stars, TrailerModal,
 } from '../components/ui'
 
+const MOODS = [
+  { id: 'Action', label: '💥 Kịch tính & Hành động', desc: 'Nhịp độ dồn dập, kỹ xảo mãn nhãn' },
+  { id: 'Sci-Fi', label: '🧠 Hack não & Viễn tưởng', desc: 'Du hành không gian, tương lai & chiều không gian' },
+  { id: 'Romance', label: '💖 Lãng mạn & Chữa lành', desc: 'Những câu chuyện tình cảm giàu cảm xúc' },
+  { id: 'Comedy', label: '😂 Hài hước & Thư giãn', desc: 'Tiếng cười sảng khoái giải tỏa căng thẳng' },
+  { id: 'Crime', label: '🕵️ Hình sự & Trinh thám', desc: 'Đấu trí căng thẳng, điều tra phá án' },
+  { id: 'Animation', label: '👨‍👩‍👧‍👦 Hoạt hình & Gia đình', desc: 'Thế giới kỳ diệu cho mọi lứa tuổi' },
+]
+
 export default function Home() {
   const { user } = useAuth()
   const [recs, setRecs] = useState(null)
@@ -14,6 +23,9 @@ export default function Home() {
   const [topRated, setTopRated] = useState(null)
   const [genres, setGenres] = useState([])
   const [recent, setRecent] = useState([])
+  const [activeMood, setActiveMood] = useState('')
+  const [moodMovies, setMoodMovies] = useState([])
+  const [surpriseMovie, setSurpriseMovie] = useState(null)
   const [slideIdx, setSlideIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const [heroMeta, setHeroMeta] = useState(null)
@@ -27,6 +39,29 @@ export default function Home() {
     api('/api/movies?sort=popular&size=12').then(d => setPopular(d.items)).catch(() => {})
     api('/api/movies?sort=rating&min_ratings=50&size=12').then(d => setTopRated(d.items)).catch(() => {})
   }, [user])
+
+  const selectMood = (moodName) => {
+    if (activeMood === moodName) {
+      setActiveMood('')
+      setMoodMovies([])
+      return
+    }
+    setActiveMood(moodName)
+    const g = genres.find(x => x.name.toLowerCase() === moodName.toLowerCase())
+    const q = g ? `?genre_id=${g.id}&sort=rating&min_ratings=30&size=6` : `?sort=rating&min_ratings=30&size=6`
+    api(`/api/movies${q}`).then(d => setMoodMovies(d.items || [])).catch(() => {})
+  }
+
+  const pickSurprise = () => {
+    const pool = [
+      ...(recs?.items?.map(i => i.movie) || []),
+      ...(topRated || []),
+      ...(popular || []),
+    ]
+    if (!pool.length) return
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    setSurpriseMovie(pick)
+  }
 
   const slides = (recs?.items?.map(i => i.movie) || popular || []).slice(0, 5)
   const featured = slides[slideIdx] || slides[0]
@@ -105,8 +140,10 @@ export default function Home() {
                   </button>
                 </>
               )}
+              <button type="button" className="btn ghost" onClick={pickSurprise}>
+                🎲 Bốc thăm Phim Ngẫu nhiên
+              </button>
               <Link className="btn ghost" to="/movies">Khám phá kho phim</Link>
-              {!user && <Link className="btn ghost" to="/register">Tạo tài khoản</Link>}
             </div>
 
             {slides.length > 1 && (
@@ -133,6 +170,68 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Hộp kết quả Bốc thăm Ngẫu nhiên (Surprise Me) */}
+      {surpriseMovie && (
+        <div className="card" style={{ marginBottom: 20, border: '1px solid #f59e0b', background: 'linear-gradient(135deg, rgba(30,41,59,0.96), rgba(15,23,42,0.98))' }}>
+          <div className="list-row" style={{ border: 'none', padding: 0 }}>
+            <Link to={`/movies/${surpriseMovie.id}`}><Poster movie={surpriseMovie} size="sm" /></Link>
+            <div className="grow">
+              <span className="tag warn">🎲 Gợi ý Bất ngờ Hôm nay dành cho bạn</span>
+              <h3 style={{ margin: '6px 0 4px' }}>
+                <Link to={`/movies/${surpriseMovie.id}`}>{cleanTitle(surpriseMovie.title)}</Link>{' '}
+                <span className="muted">({surpriseMovie.year || '—'})</span>
+              </h3>
+              <div className="muted small">
+                <Stars value={surpriseMovie.rating_avg} /> ({surpriseMovie.rating_count} lượt đánh giá) ·{' '}
+                {(surpriseMovie.genres || []).map(g => g.name).join(', ')}
+              </div>
+            </div>
+            <div className="row-actions">
+              <button type="button" className="btn ghost sm" onClick={pickSurprise}>🎲 Đổi phim khác</button>
+              <Link className="btn sm" to={`/movies/${surpriseMovie.id}`}>Xem ngay →</Link>
+              <button type="button" className="btn ghost sm" onClick={() => setSurpriseMovie(null)}>✕</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Khu vực Chọn Phim Theo Tâm Trạng (Mood Matcher) */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>🎭 Hôm nay tâm trạng của bạn thế nào?</h3>
+            <span className="muted small">Chọn một tâm trạng để AI lọc ngay những tuyệt phẩm điện ảnh phù hợp nhất</span>
+          </div>
+          {activeMood && (
+            <button type="button" className="btn ghost sm" onClick={() => { setActiveMood(''); setMoodMovies([]) }}>
+              Đóng ✕
+            </button>
+          )}
+        </div>
+        <div className="chips" style={{ marginBottom: activeMood ? 14 : 0 }}>
+          {MOODS.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className={`chip ${activeMood === m.id ? 'active' : ''}`}
+              onClick={() => selectMood(m.id)}
+              title={m.desc}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {activeMood && (
+          <div>
+            {moodMovies.length === 0 ? <Loading /> : (
+              <div className="movie-grid">
+                {moodMovies.map(m => <MovieCard key={m.id} movie={m} />)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {genres.length > 0 && (
         <div className="genre-strip">
           <span className="genre-strip-label">Thể loại:</span>
@@ -154,7 +253,7 @@ export default function Home() {
             {recs.model_version && <> · Phiên bản <code>{recs.model_version}</code></>}
             <span className="muted" style={{ marginLeft: 8 }}>{recs.reason}</span>
           </div>
-          <Link to="/recommendations" className="btn ghost sm">Đổi thuật toán AI →</Link>
+          <Link to="/recommendations" className="btn ghost sm">🔬 Phòng thí nghiệm 3 thuật toán →</Link>
         </div>
       )}
 

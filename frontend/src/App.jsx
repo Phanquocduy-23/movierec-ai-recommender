@@ -27,13 +27,24 @@ function QuickSearch() {
   const [open, setOpen] = useState(false)
   const nav = useNavigate()
   const boxRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     const onClick = (e) => {
       if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
     }
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
     document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      window.removeEventListener('keydown', onKeyDown)
+    }
   }, [])
 
   useEffect(() => {
@@ -61,8 +72,9 @@ function QuickSearch() {
     <div className="nav-search" ref={boxRef}>
       <form onSubmit={onSubmit}>
         <input
+          ref={inputRef}
           className="nav-search-input"
-          placeholder="🔍 Tìm nhanh phim (vd: Matrix, Toy Story)…"
+          placeholder="🔍 Tìm nhanh phim (Ctrl+K)…"
           value={q}
           onFocus={() => results.length > 0 && setOpen(true)}
           onChange={e => setQ(e.target.value)}

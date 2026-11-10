@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
-import { cleanTitle, Empty, ErrorBox, Loading, METHOD_LABEL, MovieCard, Poster } from '../components/ui'
+import { cleanTitle, Empty, ErrorBox, Loading, METHOD_LABEL, MovieCard, Poster, Stars } from '../components/ui'
 
 const OPTIONS = [
   { v: 'auto', label: '🤖 Tự động (Khuyến nghị)', desc: 'Tự động chọn SVD hoặc Item-based KNN tùy trạng thái hồ sơ' },
@@ -16,6 +16,8 @@ export default function Recommendations() {
   const [method, setMethod] = useState('auto')
   const [limit, setLimit] = useState(20)
   const [genreFilter, setGenreFilter] = useState('')
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareData, setCompareData] = useState(null)
   const [data, setData] = useState(null)
   const [myRatings, setMyRatings] = useState(null)
   const [genres, setGenres] = useState([])
@@ -30,6 +32,17 @@ export default function Recommendations() {
     api(`/api/recommendations?method=${method}&n=${limit}`).then(setData).catch(e => setError(e.message))
   }
 
+  const loadComparison = () => {
+    setCompareData(null)
+    Promise.all([
+      api('/api/recommendations?method=svd&n=10'),
+      api('/api/recommendations?method=item_knn&n=10'),
+      api('/api/recommendations?method=popular&n=10'),
+    ]).then(([svd, knn, pop]) => {
+      setCompareData({ svd, knn, pop })
+    }).catch(e => setError(e.message))
+  }
+
   const loadMyRatings = () => {
     if (!user) { setMyRatings(null); return }
     api('/api/ratings/me?size=100').then(r => {
@@ -41,7 +54,12 @@ export default function Recommendations() {
   useEffect(() => {
     setData(null)
     loadRecs()
+    if (compareMode) loadComparison()
   }, [method, limit, user]) // eslint-disable-line
+
+  useEffect(() => {
+    if (compareMode) loadComparison()
+  }, [compareMode]) // eslint-disable-line
 
   useEffect(() => {
     loadMyRatings()
@@ -71,6 +89,7 @@ export default function Recommendations() {
       setQuickMsg(`Đã chấm ${score} ★ cho "${cleanTitle(movie.title)}" — Danh sách gợi ý AI đã cập nhật!`)
       loadMyRatings()
       loadRecs()
+      if (compareMode) loadComparison()
     } catch (e) {
       setError(e.message)
     }
@@ -88,6 +107,29 @@ export default function Recommendations() {
     const topGenres = Object.entries(gCount).sort((a, b) => b[1] - a[1]).slice(0, 5)
     return { total: myRatings.total, avg: avg.toFixed(2), topGenres }
   }, [myRatings])
+
+  // Thống kê so sánh 3 thuật toán khi bật chế độ Phòng thí nghiệm
+  const compareStats = useMemo(() => {
+    if (!compareData) return null
+    const svdIds = new Set((compareData.svd?.items || []).map(i => i.movie.id))
+    const knnIds = new Set((compareData.knn?.items || []).map(i => i.movie.id))
+    const popIds = new Set((compareData.pop?.items || []).map(i => i.movie.id))
+    const consensusIds = new Set([...svdIds].filter(x => knnIds.has(x)))
+    const svdPopOverlap = [...svdIds].filter(x => popIds.has(x)).length
+    const countGenres = (items) => {
+      const s = new Set()
+      ;(items || []).forEach(it => (it.movie.genres || []).forEach(g => s.add(g.name)))
+      return s.size
+    }
+    return {
+      consensusIds,
+      consensusCount: consensusIds.size,
+      svdPopOverlap,
+      svdGenres: countGenres(compareData.svd?.items),
+      knnGenres: countGenres(compareData.knn?.items),
+      popGenres: countGenres(compareData.pop?.items),
+    }
+  }, [compareData])
 
   const availableGenres = useMemo(() => {
     const set = new Set()
@@ -112,19 +154,30 @@ export default function Recommendations() {
         </div>
         <div className="row-actions">
           {user && (
-            <button
-              type="button"
-              className={`btn sm ${showQuickRate ? '' : 'ghost'}`}
-              onClick={() => setShowQuickRate(v => !v)}
-            >
-              ⚡ {showQuickRate ? 'Ẩn chấm nhanh' : 'Chấm nhanh theo thể loại'}
-            </button>
+            <>
+              <button
+                type="button"
+                className={`btn sm ${compareMode ? '' : 'ghost'}`}
+                onClick={() => setCompareMode(v => !v)}
+              >
+                🔬 {compareMode ? 'Đang bật: So sánh 3 mô hình song song' : 'So sánh 3 mô hình song song'}
+              </button>
+              <button
+                type="button"
+                className={`btn sm ${showQuickRate ? '' : 'ghost'}`}
+                onClick={() => setShowQuickRate(v => !v)}
+              >
+                ⚡ {showQuickRate ? 'Ẩn chấm nhanh' : 'Chấm nhanh theo thể loại'}
+              </button>
+            </>
           )}
-          <select value={limit} onChange={e => setLimit(Number(e.target.value))}>
-            <option value={10}>Top 10 phim</option>
-            <option value={20}>Top 20 phim</option>
-            <option value={30}>Top 30 phim</option>
-          </select>
+          {!compareMode && (
+            <select value={limit} onChange={e => setLimit(Number(e.target.value))}>
+              <option value={10}>Top 10 phim</option>
+              <option value={20}>Top 20 phim</option>
+              <option value={30}>Top 30 phim</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -200,67 +253,156 @@ export default function Recommendations() {
         </div>
       )}
 
-      {user && (
-        <div className="method-cards">
-          {OPTIONS.map(o => (
-            <button
-              key={o.v}
-              type="button"
-              className={`method-card ${method === o.v ? 'active' : ''}`}
-              onClick={() => setMethod(o.v)}
-            >
-              <div className="method-card-title">{o.label}</div>
-              <div className="muted small">{o.desc}</div>
-            </button>
-          ))}
+      {/* Chế độ Phòng Thí Nghiệm: Đối chiếu 3 Mô hình Song Song */}
+      {compareMode ? (
+        <div>
+          {!compareData ? <Loading /> : (
+            <>
+              <div className="card" style={{ marginBottom: 18, background: 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95))' }}>
+                <div className="row-actions" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>🔬 Phân tích Đối chiếu Trực tiếp 3 Mô hình (Top-10)</h3>
+                    <p className="muted small" style={{ margin: '4px 0 0' }}>
+                      So sánh danh sách Top-10 phim được sinh ra cùng lúc cho tài khoản <b>@{user?.username}</b> bởi 3 thuật toán
+                    </p>
+                  </div>
+                  <div className="row-actions" style={{ gap: 10 }}>
+                    <span className="tag ok">
+                      🎯 Đồng thuận SVD ∩ KNN: <b>{compareStats.consensusCount}/10 phim</b>
+                    </span>
+                    <span className="tag info">
+                      Khác biệt so với Phổ biến: <b>{10 - compareStats.svdPopOverlap}/10 phim mới</b>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 16 }}>
+                {[
+                  {
+                    key: 'svd',
+                    title: '🧬 1. Phân rã ma trận SVD',
+                    sub: `Độ đa dạng: ${compareStats.svdGenres} thể loại · Phục vụ: ${METHOD_LABEL[compareData.svd.served_method]}`,
+                    res: compareData.svd,
+                    accent: '#8b5cf6',
+                  },
+                  {
+                    key: 'knn',
+                    title: '🔗 2. Item-based KNN (Adjusted Cosine)',
+                    sub: `Độ đa dạng: ${compareStats.knnGenres} thể loại · Phục vụ: ${METHOD_LABEL[compareData.knn.served_method]}`,
+                    res: compareData.knn,
+                    accent: '#10b981',
+                  },
+                  {
+                    key: 'pop',
+                    title: '🔥 3. Độ phổ biến (Bayesian Baseline)',
+                    sub: `Độ đa dạng: ${compareStats.popGenres} thể loại · Không cá nhân hóa`,
+                    res: compareData.pop,
+                    accent: '#f59e0b',
+                  },
+                ].map(col => (
+                  <div key={col.key} className="card" style={{ borderTop: `3px solid ${col.accent}` }}>
+                    <h3 style={{ margin: '0 0 4px' }}>{col.title}</h3>
+                    <div className="muted small" style={{ marginBottom: 12 }}>{col.sub}</div>
+                    <div className="list">
+                      {col.res.items.map((it, idx) => {
+                        const isConsensus = col.key !== 'pop' && compareStats.consensusIds.has(it.movie.id)
+                        return (
+                          <div key={it.movie.id} className="list-row" style={{ padding: '8px 10px' }}>
+                            <span style={{ fontWeight: 700, width: 24, color: col.accent }}>#{idx + 1}</span>
+                            <Link to={`/movies/${it.movie.id}`}><Poster movie={it.movie} size="sm" /></Link>
+                            <div className="grow">
+                              <Link to={`/movies/${it.movie.id}`} className="movie-title" style={{ fontSize: 14 }}>
+                                {cleanTitle(it.movie.title)}
+                              </Link>
+                              <div className="muted small">
+                                {it.movie.year || '—'} · <Stars value={it.movie.rating_avg} />
+                              </div>
+                              <div className="small" style={{ color: col.accent, fontWeight: 600 }}>
+                                Dự đoán: ★ {it.predicted_score?.toFixed(2)}
+                                {isConsensus && <span className="tag ok" style={{ marginLeft: 6, fontSize: 10 }}>🎯 Đồng thuận AI</span>}
+                              </div>
+                              {it.because?.length > 0 && (
+                                <div className="muted small" style={{ fontSize: 11 }}>
+                                  Vì thích: {it.because.slice(0, 2).map(cleanTitle).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      )}
-
-      <ErrorBox error={error} />
-      {!data ? <Loading /> : (
+      ) : (
         <>
-          <div className={`alert ${data.fallback ? 'warn' : 'info'}`}>
-            <div className="row-actions" style={{ justifyContent: 'space-between' }}>
-              <div>
-                <b>Phương pháp thực tế đã phục vụ: {METHOD_LABEL[data.served_method]}</b>
-                {data.model_version && <> · Phiên bản mô hình <code>{data.model_version}</code></>}
-                {data.fallback && <> · <span className="tag warn">Dự phòng (Fallback)</span></>}
-              </div>
-              {availableGenres.length > 0 && (
-                <select value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
-                  <option value="">Lọc thể loại trong danh sách gợi ý ({data.items.length})</option>
-                  {availableGenres.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-              )}
-            </div>
-            <div style={{ marginTop: 6 }}>{data.reason}</div>
-            {!user && (
-              <div style={{ marginTop: 6 }}>
-                👉 <Link to="/login"><b>Đăng nhập</b></Link> (có sẵn 4 tài khoản mẫu 1-chạm) và chấm điểm phim để trải nghiệm gợi ý cá nhân hóa!
-              </div>
-            )}
-          </div>
-
-          {filteredItems.length === 0 ? <Empty>Chưa có gợi ý phù hợp.</Empty> : (
-            <div className="movie-grid">
-              {filteredItems.map((it, idx) => (
-                <MovieCard
-                  key={it.movie.id}
-                  movie={it.movie}
-                  badge={`#${idx + 1}`}
-                  extra={
-                    <>
-                      {it.source !== 'popular'
-                        ? <div className="pred">Điểm dự đoán cho bạn: <b>★ {it.predicted_score?.toFixed(2)}</b></div>
-                        : <div className="pred muted">Phổ biến (Weighted: ★ {it.predicted_score?.toFixed(2)})</div>}
-                      {it.because.length > 0 && (
-                        <div className="because">Vì bạn thích: {it.because.map(cleanTitle).join(', ')}</div>
-                      )}
-                    </>
-                  }
-                />
+          {user && (
+            <div className="method-cards">
+              {OPTIONS.map(o => (
+                <button
+                  key={o.v}
+                  type="button"
+                  className={`method-card ${method === o.v ? 'active' : ''}`}
+                  onClick={() => setMethod(o.v)}
+                >
+                  <div className="method-card-title">{o.label}</div>
+                  <div className="muted small">{o.desc}</div>
+                </button>
               ))}
             </div>
+          )}
+
+          <ErrorBox error={error} />
+          {!data ? <Loading /> : (
+            <>
+              <div className={`alert ${data.fallback ? 'warn' : 'info'}`}>
+                <div className="row-actions" style={{ justifyContent: 'space-between' }}>
+                  <div>
+                    <b>Phương pháp thực tế đã phục vụ: {METHOD_LABEL[data.served_method]}</b>
+                    {data.model_version && <> · Phiên bản mô hình <code>{data.model_version}</code></>}
+                    {data.fallback && <> · <span className="tag warn">Dự phòng (Fallback)</span></>}
+                  </div>
+                  {availableGenres.length > 0 && (
+                    <select value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+                      <option value="">Lọc thể loại trong danh sách gợi ý ({data.items.length})</option>
+                      {availableGenres.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  )}
+                </div>
+                <div style={{ marginTop: 6 }}>{data.reason}</div>
+                {!user && (
+                  <div style={{ marginTop: 6 }}>
+                    👉 <Link to="/login"><b>Đăng nhập</b></Link> (có sẵn 4 tài khoản mẫu 1-chạm) và chấm điểm phim để trải nghiệm gợi ý cá nhân hóa!
+                  </div>
+                )}
+              </div>
+
+              {filteredItems.length === 0 ? <Empty>Chưa có gợi ý phù hợp.</Empty> : (
+                <div className="movie-grid">
+                  {filteredItems.map((it, idx) => (
+                    <MovieCard
+                      key={it.movie.id}
+                      movie={it.movie}
+                      badge={`#${idx + 1}`}
+                      extra={
+                        <>
+                          {it.source !== 'popular'
+                            ? <div className="pred">Điểm dự đoán cho bạn: <b>★ {it.predicted_score?.toFixed(2)}</b></div>
+                            : <div className="pred muted">Phổ biến (Weighted: ★ {it.predicted_score?.toFixed(2)})</div>}
+                          {it.because.length > 0 && (
+                            <div className="because">Vì bạn thích: {it.because.map(cleanTitle).join(', ')}</div>
+                          )}
+                        </>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
