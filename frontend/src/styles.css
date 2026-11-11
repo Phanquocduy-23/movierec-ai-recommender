@@ -1482,3 +1482,58 @@ label.check {
   .footer-inner { grid-template-columns: 1fr 1fr; }
   .nav-search { display: none; }
 }
+
+/* Light Theme (Academic Presentation Mode) */
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-elev: #ffffff;
+  --bg-card: #ffffff;
+  --border: #cbd5e1;
+  --text: #0f172a;
+  --muted: #475569;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+}
+
+[data-theme="light"] .navbar {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+[data-theme="light"] .nav-search-input,
+[data-theme="light"] .search-dropdown,
+[data-theme="light"] .modal-box {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+[data-theme="light"] .movie-title,
+[data-theme="light"] .stat-value {
+  color: #0f172a;
+}
+
+[data-theme="light"] .synopsis-box p {
+  color: #334155;
+}
+
+[data-theme="light"] .chip {
+  color: #4338ca;
+  background: rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] .chip.active,
+[data-theme="light"] .chip:hover {
+  color: #ffffff;
+  background: var(--primary);
+}
+
+[data-theme="light"] .footer-rich {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .hero-cinema {
+  color: #f8fafc;
+}
+

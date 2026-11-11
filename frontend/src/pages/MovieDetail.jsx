@@ -369,6 +369,8 @@ export default function MovieDetail() {
         )}
       </section>
 
+      <MovieComparator movieA={movie} similarItems={similar?.items || []} />
+
       {showTrailer && (
         <TrailerModal
           ytId={ytId}
@@ -378,5 +380,159 @@ export default function MovieDetail() {
         />
       )}
     </div>
+  )
+}
+
+function MovieComparator({ movieA, similarItems }) {
+  const [searchQ, setSearchQ] = useState('')
+  const [candidates, setCandidates] = useState([])
+  const [cmp, setCmp] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setCmp(null)
+    setSearchQ('')
+    setCandidates([])
+  }, [movieA.id])
+
+  useEffect(() => {
+    if (searchQ.trim().length < 2) {
+      setCandidates([])
+      return
+    }
+    const t = setTimeout(() => {
+      api(`/api/movies?q=${encodeURIComponent(searchQ.trim())}&size=6`)
+        .then(d => setCandidates((d.items || []).filter(x => x.id !== movieA.id)))
+        .catch(() => {})
+    }, 220)
+    return () => clearTimeout(t)
+  }, [searchQ, movieA.id])
+
+  const runCompare = (otherId) => {
+    setLoading(true)
+    setCandidates([])
+    api(`/api/movies/${movieA.id}/compare/${otherId}`)
+      .then(setCmp)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  return (
+    <section className="section">
+      <div className="card" style={{ border: '1px solid rgba(99, 102, 241, 0.35)' }}>
+        <div className="section-head" style={{ marginTop: 0 }}>
+          <div>
+            <h2 style={{ margin: 0 }}>⚖️ Đối chiếu AI giữa 2 Bộ Phim & Tìm Phim Giao Thoa (Double Feature)</h2>
+            <p className="muted small" style={{ margin: '4px 0 0' }}>
+              Chọn một bộ phim thứ 2 để tính độ tương đồng Adjusted Cosine, số khán giả cùng xem và tìm 6 bộ phim giao thoa cho người thích cả hai!
+            </p>
+          </div>
+        </div>
+
+        <div className="row-actions" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <input
+            placeholder="🔍 Gõ tên bộ phim thứ 2 để so sánh với phim này..."
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            style={{ minWidth: 280, flex: 1 }}
+          />
+          {similarItems.slice(0, 4).map(({ movie: sm }) => (
+            <button
+              key={sm.id}
+              type="button"
+              className="chip"
+              onClick={() => runCompare(sm.id)}
+              title="Bấm để so sánh nhanh"
+            >
+              ⚡ So sánh với: {cleanTitle(sm.title).slice(0, 22)}
+            </button>
+          ))}
+        </div>
+
+        {candidates.length > 0 && (
+          <div className="list" style={{ marginBottom: 14 }}>
+            {candidates.map(c => (
+              <div key={c.id} className="list-row" style={{ padding: '6px 10px' }}>
+                <Poster movie={c} size="sm" />
+                <div className="grow">
+                  <b>{cleanTitle(c.title)}</b> <span className="muted small">({c.year || '—'})</span>
+                  <div className="muted small">{c.genres.map(g => g.name).join(', ')}</div>
+                </div>
+                <button type="button" className="btn sm" onClick={() => runCompare(c.id)}>
+                  ⚖️ Chọn đối chiếu
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loading && <Loading />}
+
+        {cmp && !loading && (
+          <div style={{ marginTop: 12 }}>
+            <div className="stat-grid" style={{ marginBottom: 16 }}>
+              <div className="stat card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
+                <div className="stat-value" style={{ color: '#10b981' }}>
+                  {Math.round((cmp.effective_similarity || 0) * 100)}%
+                </div>
+                <div className="muted small">
+                  {cmp.knn_similarity != null ? 'Độ tương đồng Item-KNN' : 'Độ giao thoa thể loại (Jaccard)'}
+                </div>
+              </div>
+              <div className="stat card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
+                <div className="stat-value" style={{ color: '#f59e0b' }}>{cmp.co_raters}</div>
+                <div className="muted small">Khán giả đã cùng chấm cả 2 phim</div>
+              </div>
+              <div className="stat card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
+                <div className="stat-value" style={{ color: '#8b5cf6' }}>{cmp.shared_genres.length}</div>
+                <div className="muted small">
+                  Thể loại chung ({cmp.shared_genres.join(', ') || 'Không trùng'})
+                </div>
+              </div>
+            </div>
+
+            <div className="grid2" style={{ marginBottom: 16 }}>
+              {[
+                { m: cmp.movie_a, coAvg: cmp.avg_a_by_coraters, label: 'Phim đang xem (A)' },
+                { m: cmp.movie_b, coAvg: cmp.avg_b_by_coraters, label: 'Phim đối chiếu (B)' },
+              ].map(({ m, coAvg, label }) => (
+                <div key={m.id} className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Link to={`/movies/${m.id}`}><Poster movie={m} size="sm" /></Link>
+                  <div className="grow">
+                    <span className="muted small">{label}</span>
+                    <div><Link to={`/movies/${m.id}`} className="movie-title">{cleanTitle(m.title)}</Link></div>
+                    <div className="muted small">
+                      Năm: <b>{m.year || '—'}</b> · Điểm TB: <Stars value={m.rating_avg} /> ({m.rating_count} lượt)
+                    </div>
+                    {coAvg != null && (
+                      <div className="small" style={{ color: '#38bdf8', marginTop: 2 }}>
+                        Nhóm khán giả xem cả 2 phim chấm: <b>★ {coAvg}</b>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {cmp.joint_recommendations?.length > 0 && (
+              <div>
+                <h3 style={{ marginBottom: 10 }}>
+                  🎯 Gợi ý Giao Thoa: Nếu bạn thích cả “{cleanTitle(cmp.movie_a.title)}” và “{cleanTitle(cmp.movie_b.title)}”
+                </h3>
+                <div className="movie-grid">
+                  {cmp.joint_recommendations.map(({ movie: jm, predicted_score }) => (
+                    <MovieCard
+                      key={jm.id}
+                      movie={jm}
+                      extra={<div className="pred">Điểm kết hợp AI: <b>★ {predicted_score?.toFixed(2)}</b></div>}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

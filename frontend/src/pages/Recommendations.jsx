@@ -143,6 +143,30 @@ export default function Recommendations() {
     return data.items.filter(it => (it.movie.genres || []).some(g => g.name === genreFilter))
   }, [data, genreFilter])
 
+  const exportRecsCsv = () => {
+    if (!filteredItems.length) return
+    const header = ['Hang', 'Movie ID', 'Ten Phim', 'Nam', 'The Loai', 'Thuat Toan Phuc Vu', 'Diem Du Doan AI', 'Ly Do Goi Y']
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = filteredItems.map((it, i) => [
+      i + 1,
+      it.movie.id,
+      cleanTitle(it.movie.title),
+      it.movie.year || '',
+      (it.movie.genres || []).map(g => g.name).join(' | '),
+      it.source,
+      it.predicted_score?.toFixed(3) || '',
+      (it.because || []).map(cleanTitle).join('; '),
+    ].map(esc).join(','))
+    const csv = '\uFEFF' + [header.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    Object.assign(document.createElement('a'), {
+      href: url,
+      download: `goi_y_ai_${data?.served_method || 'movierec'}.csv`,
+    }).click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
       <div className="section-head">
@@ -153,6 +177,14 @@ export default function Recommendations() {
           </p>
         </div>
         <div className="row-actions">
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={exportRecsCsv}
+            disabled={!filteredItems.length}
+          >
+            📥 Xuất gợi ý (CSV)
+          </button>
           {user && (
             <>
               <button

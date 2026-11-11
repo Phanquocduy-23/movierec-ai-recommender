@@ -14,6 +14,7 @@ import AdminUsers from './pages/admin/AdminUsers'
 import Dashboard from './pages/admin/Dashboard'
 import { Login, Register } from './pages/AuthPages'
 import Home from './pages/Home'
+import Leaderboard from './pages/Leaderboard'
 import MovieDetail from './pages/MovieDetail'
 import Movies from './pages/Movies'
 import MyRatings from './pages/MyRatings'
@@ -111,7 +112,7 @@ function QuickSearch() {
   )
 }
 
-function Navbar() {
+function Navbar({ theme, onToggleTheme }) {
   const { user, logout, isAdmin } = useAuth()
   const nav = useNavigate()
   return (
@@ -121,6 +122,7 @@ function Navbar() {
         <nav>
           <NavLink to="/" end>Trang chủ</NavLink>
           <NavLink to="/movies">Khám phá</NavLink>
+          <NavLink to="/leaderboard">🏆 Bảng xếp hạng</NavLink>
           <NavLink to="/recommendations">✨ Gợi ý AI</NavLink>
           {user && <NavLink to="/my-ratings">Đã chấm điểm</NavLink>}
           {user && <NavLink to="/watchlist">Muốn xem</NavLink>}
@@ -129,6 +131,14 @@ function Navbar() {
       </div>
       <QuickSearch />
       <div className="nav-right">
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={onToggleTheme}
+          title={theme === 'light' ? 'Chuyển sang giao diện Tối (Cinema Dark)' : 'Chuyển sang giao diện Sáng (Academic Light)'}
+        >
+          {theme === 'light' ? '🌙 Tối' : '☀️ Sáng'}
+        </button>
         {user ? (
           <>
             <NavLink to="/profile" className="user-chip">
@@ -150,14 +160,29 @@ function Navbar() {
 
 export default function App() {
   const { ready } = useAuth()
+  const [theme, setTheme] = useState(() => localStorage.getItem('movierec_theme') || 'dark')
+  const [showTop, setShowTop] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('movierec_theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 380)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   if (!ready) return <div className="center-page"><div className="spinner" /></div>
   return (
     <>
-      <Navbar />
+      <Navbar theme={theme} onToggleTheme={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))} />
       <main className="container">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/movies" element={<Movies />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/movies/:id" element={<MovieDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -177,6 +202,16 @@ export default function App() {
           <Route path="*" element={<div className="empty">Không tìm thấy trang</div>} />
         </Routes>
       </main>
+      {showTop && (
+        <button
+          type="button"
+          className="btn sm"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 90, borderRadius: 999, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
+        >
+          ↑ Đầu trang
+        </button>
+      )}
       <footer className="footer-rich">
         <div className="footer-inner">
           <div>

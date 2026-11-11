@@ -315,3 +315,62 @@ def experiments(db: Session = Depends(get_db)):
                          "figures": [f"/static/experiments/{d.name}/figures/{f}" for f in figs]})
         db.commit()
     return runs
+
+
+# ---------------------------------------------------------------- Nhật ký gợi ý & Kiểm duyệt bình luận
+@router.get("/recommendation-logs")
+def recommendation_logs(limit: int = Query(30, ge=5, le=200), db: Session = Depends(get_db)):
+    """Nhật ký phục vụ gợi ý thời gian thực (AI Telemetry Logs)."""
+    rows = db.scalars(
+        select(RecommendationEvent).order_by(RecommendationEvent.id.desc()).limit(limit)
+    ).all()
+    uids = {r.user_id for r in rows if r.user_id is not None}
+    users = {u.id: u.username for u in db.scalars(select(User).where(User.id.in_(uids)))} if uids else {}
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "username": users.get(r.user_id, "Khách vãng lai") if r.user_id else "Khách vãng lai",
+            "requested_method": r.requested_method,
+            "served_method": r.served_method,
+            "model_version": r.model_version,
+            "fallback": r.fallback,
+            "n_items": r.n_items,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/recent-reviews")
+def recent_reviews(limit: int = Query(30, ge=5, le=100), db: Session = Depends(get_db)):
+    """Danh sách bình luận văn bản mới nhất trên toàn hệ thống để quản trị viên kiểm duyệt."""
+    rows = db.scalars(
+        select(Rating)
+        .where(Rating.comment.is_not(None))
+        .order_by(Rating.updated_at.desc())
+        .limit(limit)
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "username": r.user.username if r.user else f"user_{r.user_id}",
+            "movie_id": r.movie_id,
+            "movie_title": r.movie.title if r.movie else f"Movie #{r.movie_id}",
+            "score": r.score,
+            "comment": r.comment,
+            "updated_at": r.updated_at,
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/reviews/{rating_id}/comment", status_code=204)
+def admin_clear_comment(rating_id: int, db: Session = Depends(get_db)):
+    """Xóa nội dung bình luận vi phạm (vẫn giữ nguyên điểm sao đánh giá để bảo toàn ma trận AI)."""
+    r = db.get(Rating, rating_id)
+    if not r:
+        raise HTTPException(404, "Không tìm thấy đánh giá")
+    r.comment = None
+    db.commit()

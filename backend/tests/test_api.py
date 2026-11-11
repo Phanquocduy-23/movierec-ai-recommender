@@ -149,3 +149,40 @@ def test_movie_reviews_and_comments(client):
 
     reviews = client.get(f"/api/movies/{mid}/reviews").json()
     assert any(rv["username"] == "reviewer" and rv["comment"] == "Phim cực hay, diễn xuất ấn tượng!" for rv in reviews)
+
+
+def test_leaderboard_and_movie_comparator(client):
+    lb = client.get("/api/leaderboard?m=25").json()
+    assert lb["m"] == 25.0
+    assert "bayesian_top" in lb and "hidden_gems" in lb and "most_rated" in lb and "genre_champions" in lb
+    assert len(lb["bayesian_top"]) > 0
+
+    items = client.get("/api/movies?size=5").json()["items"]
+    m1, m2 = items[0]["id"], items[1]["id"]
+    cmp_res = client.get(f"/api/movies/{m1}/compare/{m2}")
+    assert cmp_res.status_code == 200
+    data = cmp_res.json()
+    assert data["movie_a"]["id"] == m1 and data["movie_b"]["id"] == m2
+    assert "effective_similarity" in data and "joint_recommendations" in data
+
+
+def test_admin_telemetry_and_review_moderation(client):
+    admin = login(client, "admin", "Admin@123")
+    # Trigger a recommendation so telemetry logs have entries
+    client.get("/api/recommendations")
+    logs = client.get("/api/admin/recommendation-logs", headers=admin)
+    assert logs.status_code == 200
+    assert len(logs.json()) >= 1
+
+    # Post a comment and moderate it via admin API
+    h = register(client, "mod_target")
+    mid = client.get("/api/movies").json()["items"][0]["id"]
+    client.put(f"/api/ratings/{mid}", json={"score": 4.0, "comment": "Bình luận cần kiểm duyệt"}, headers=h)
+
+    recent = client.get("/api/admin/recent-reviews", headers=admin).json()
+    target = next(r for r in recent if r["username"] == "mod_target")
+    del_res = client.delete(f"/api/admin/reviews/{target['id']}/comment", headers=admin)
+    assert del_res.status_code == 204
+    recent_after = client.get("/api/admin/recent-reviews", headers=admin).json()
+    assert not any(r["id"] == target["id"] for r in recent_after)
+
