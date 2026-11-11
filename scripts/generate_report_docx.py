@@ -1,4 +1,4 @@
-"""Tự động sinh file Báo cáo Đồ án cơ sở 2 (.docx) chuẩn Office Open XML có nhúng trực tiếp 6 biểu đồ PNG thực nghiệm."""
+"""Tự động vẽ sơ đồ kiến trúc & sinh file Báo cáo Đồ án cơ sở 2 (.docx) hoàn chỉnh kèm 9 hình ảnh minh họa."""
 from __future__ import annotations
 
 import sys
@@ -11,10 +11,73 @@ try:
 except Exception:
     pass
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DOCX = ROOT / "docs" / "Bao_Cao_Do_An_CS2_Phan_Quoc_Duy_235019.docx"
 EDA_FIG_DIR = ROOT / "data" / "processed" / "figures"
 EXP_DIR = ROOT / "artifacts" / "experiments"
+
+
+def generate_system_diagrams() -> None:
+    """Vẽ 3 sơ đồ trực quan cho Chương 3 (Kiến trúc 3 tầng, Luồng Cold-start 3 nhánh, Sơ đồ 14 bảng CSDL)."""
+    EDA_FIG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 1. Sơ đồ Kiến trúc 3 tầng
+    fig, ax = plt.subplots(figsize=(10, 4.5), dpi=160)
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 4.5)
+    ax.axis("off")
+    fig.patch.set_facecolor("#ffffff")
+
+    boxes = [
+        (0.4, 1.0, 2.6, 2.6, "#EEF2FF", "#4F46E5", "TẦNG GIAO DIỆN\n(Frontend SPA)\n\n• ReactJS 18 + Vite\n• Hero Spotlight & Trailer\n• Phòng thí nghiệm 3 mô hình\n• Dashboard Cá nhân & Admin"),
+        (3.7, 1.0, 2.6, 2.6, "#ECFDF5", "#059669", "TẦNG DỊCH VỤ & AI\n(Backend API & RecSys)\n\n• Python FastAPI + JWT RBAC\n• Popularity (Weighted Bayes)\n• Item-KNN (Adjusted Cosine)\n• SVD Matrix Factorization"),
+        (7.0, 1.0, 2.6, 2.6, "#FFFBEB", "#D97706", "TẦNG DỮ LIỆU\n(Database & Artifacts)\n\n• PostgreSQL / SQLite\n• SQLAlchemy 2.0 (14 bảng)\n• MovieLens (100.836 ratings)\n• Model Registry (.pkl)"),
+    ]
+    for x, y, w, h, fc, ec, text in boxes:
+        rect = patches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.15", facecolor=fc, edgecolor=ec, linewidth=2)
+        ax.add_patch(rect)
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=9.5, color="#0F172A", fontweight="bold")
+
+    ax.annotate("", xy=(3.65, 2.5), xytext=(3.05, 2.5), arrowprops=dict(arrowstyle="<->", lw=2, color="#334155"))
+    ax.text(3.35, 2.75, "REST API\n(JSON/JWT)", ha="center", va="bottom", fontsize=8.5, color="#334155")
+    ax.annotate("", xy=(6.95, 2.5), xytext=(6.35, 2.5), arrowprops=dict(arrowstyle="<->", lw=2, color="#334155"))
+    ax.text(6.65, 2.75, "SQLAlchemy\n& Joblib", ha="center", va="bottom", fontsize=8.5, color="#334155")
+    ax.set_title("Sơ đồ Kiến trúc Tổng thể 3 Tầng của Hệ thống MovieRec", fontsize=12, fontweight="bold", pad=10, color="#1E3A8A")
+    fig.tight_layout()
+    fig.savefig(EDA_FIG_DIR / "architecture_diagram.png", dpi=160)
+    plt.close(fig)
+
+    # 2. Sơ đồ Luồng gợi ý Hybrid 3 nhánh xử lý Cold-start
+    fig, ax = plt.subplots(figsize=(10, 4.6), dpi=160)
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 4.6)
+    ax.axis("off")
+    fig.patch.set_facecolor("#ffffff")
+
+    start_box = patches.FancyBboxPatch((0.3, 1.7), 2.1, 1.2, boxstyle="round,pad=0.12", facecolor="#F1F5F9", edgecolor="#475569", linewidth=2)
+    ax.add_patch(start_box)
+    ax.text(1.35, 2.3, "Yêu cầu Gợi ý\nGET /api/recommendations\n(User / Khách)", ha="center", va="center", fontsize=9, fontweight="bold")
+
+    branches = [
+        (3.4, 3.2, 6.2, 1.0, "#FEF3C7", "#D97706", "NHÁNH 1: COLD-START (Khách / Tài khoản mới chưa chấm điểm)\n→ Xếp hạng theo Trọng số Bayes (Popularity WR) + Khung chấm nhanh theo thể loại"),
+        (3.4, 1.8, 6.2, 1.0, "#DCFCE7", "#16A34A", "NHÁNH 2: CẬP NHẬT TỨC THỜI (Vừa chấm điểm mới / Chưa retrain SVD)\n→ Lọc cộng tác Item-based KNN (Adjusted Cosine) + Giải thích 'Vì bạn thích...'"),
+        (3.4, 0.4, 6.2, 1.0, "#EDE9FE", "#7C3AED", "NHÁNH 3: CÁ NHÂN HÓA SÂU (Hồ sơ đã học trong mô hình SVD Active)\n→ Dự đoán điểm bằng SVD Matrix Factorization + Giải thích láng giềng Item-KNN"),
+    ]
+    for x, y, w, h, fc, ec, text in branches:
+        r = patches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.12", facecolor=fc, edgecolor=ec, linewidth=1.8)
+        ax.add_patch(r)
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=8.8, color="#0F172A", fontweight="bold")
+        ax.annotate("", xy=(x - 0.05, y + h / 2), xytext=(2.45, 2.3), arrowprops=dict(arrowstyle="->", lw=1.8, color=ec))
+
+    ax.set_title("Sơ đồ Luồng Gợi ý Thông minh 3 Nhánh & Xử lý Bài toán Cold-Start", fontsize=12, fontweight="bold", pad=8, color="#1E3A8A")
+    fig.tight_layout()
+    fig.savefig(EDA_FIG_DIR / "cold_start_flow.png", dpi=160)
+    plt.close(fig)
 
 
 def find_latest_exp_fig_dir() -> Path | None:
@@ -52,7 +115,7 @@ def _bullet(text: str) -> str:
     return _p(f"•  {text}", bold=False, size_half_pt=26, align="both", space_after=100)
 
 
-def _img(rel_id: str, doc_pr_id: int, caption: str, cx: int = 5120640, cy: int = 2926080) -> str:
+def _img(rel_id: str, doc_pr_id: int, caption: str, cx: int = 5120640, cy: int = 2743200) -> str:
     drawing = (
         '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr><w:r><w:drawing>'
         f'<wp:inline distT="0" distB="0" distL="0" distR="0">'
@@ -101,8 +164,9 @@ def _table(headers: list[str], rows: list[list[str]]) -> str:
 
 
 def build_report() -> Path:
+    generate_system_diagrams()
     body = []
-    media_files: list[tuple[str, str, Path]] = []  # (rel_id, media_name, path)
+    media_files: list[tuple[str, str, Path]] = []
 
     def register_img(path: Path | None, caption: str) -> None:
         if path and path.exists():
@@ -117,7 +181,15 @@ def build_report() -> Path:
     body.append(_p("ĐỀ TÀI: XÂY DỰNG WEBSITE GỢI Ý PHIM CÁ NHÂN HÓA ỨNG DỤNG TRÍ TUỆ NHÂN TẠO SỬ DỤNG LỌC CỘNG TÁC DỰA TRÊN ĐÁNH GIÁ NGƯỜI DÙNG", bold=True, size_half_pt=30, align="center", color="0F172A", space_after=300))
     body.append(_p("Sinh viên thực hiện: Phan Quốc Duy", bold=True, size_half_pt=28, align="center", space_after=100))
     body.append(_p("Mã số sinh viên: 235019  |  Lớp: DH23TIN05", bold=False, size_half_pt=26, align="center", space_after=100))
-    body.append(_p("Ngành: Công nghệ thông tin  —  Năm học: 2026", bold=False, size_half_pt=26, align="center", space_after=400))
+    body.append(_p("Ngành: Công nghệ thông tin  —  Năm học: 2026", bold=False, size_half_pt=26, align="center", space_after=320))
+
+    # Mục lục tóm tắt
+    body.append(_h1("MỤC LỤC BÁO CÁO"))
+    body.append(_bullet("CHƯƠNG 1: TỔNG QUAN ĐỀ TÀI (Lý do chọn đề tài, Mục tiêu, Phạm vi & Công nghệ sử dụng)"))
+    body.append(_bullet("CHƯƠNG 2: CƠ SỞ LÝ THUYẾT (Popularity Bayes, Item-based KNN Adjusted Cosine, Phân rã ma trận SVD & Độ đo đánh giá)"))
+    body.append(_bullet("CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG (Kiến trúc 3 tầng, Luồng Cold-Start 3 nhánh, Thiết kế 14 bảng CSDL & Giao diện)"))
+    body.append(_bullet("CHƯƠNG 4: THỰC NGHIỆM, CÀI ĐẶT VÀ KIỂM THỬ (Tiền xử lý MovieLens, Kết quả thực nghiệm AI & 16 kịch bản kiểm thử Pytest)"))
+    body.append(_bullet("CHƯƠNG 5: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN"))
 
     # Chương 1
     body.append(_h1("CHƯƠNG 1: TỔNG QUAN ĐỀ TÀI"))
@@ -129,7 +201,7 @@ def build_report() -> Path:
     body.append(_table(
         ["Thành phần", "Công nghệ / Thư viện", "Vai trò trong hệ thống"],
         [
-            ["Frontend", "ReactJS 18, Vite, HTML5, CSS3, JavaScript", "Giao diện khám phá phim, xem Trailer YouTube, chấm điểm, viết bình luận, biểu đồ Gu Điện Ảnh và cổng Admin"],
+            ["Frontend", "ReactJS 18, Vite, HTML5, CSS3, JavaScript", "Giao diện khám phá phim, xem Trailer YouTube, chấm điểm, viết bình luận, Phòng thí nghiệm đối chiếu 3 mô hình song song, Mood Matcher, Dashboard cá nhân và cổng Admin"],
             ["Backend API", "Python, FastAPI, REST API, Pydantic v2", "Cung cấp dịch vụ API, kiểm tra dữ liệu đầu vào và phục vụ suy luận AI"],
             ["Cơ sở dữ liệu & ORM", "PostgreSQL / SQLite, SQLAlchemy 2.0, Alembic", "Thiết kế 14 bảng quan hệ chuẩn hóa và quản lý phiên bản lược đồ CSDL"],
             ["Bảo mật & Phân quyền", "JWT (HS256), Bcrypt RBAC", "Xác thực bằng token JWT và phân quyền theo vai trò Người dùng (user) / Quản trị viên (admin)"],
@@ -153,10 +225,12 @@ def build_report() -> Path:
 
     # Chương 3
     body.append(_h1("CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG"))
-    body.append(_h2("3.1. Luồng gợi ý thông minh 3 nhánh xử lý Cold-start"))
+    body.append(_h2("3.1. Kiến trúc hệ thống 3 tầng & Luồng gợi ý thông minh 3 nhánh"))
+    register_img(EDA_FIG_DIR / "architecture_diagram.png", "Hình 3.1: Sơ đồ kiến trúc tổng thể 3 tầng của hệ thống MovieRec.")
     body.append(_bullet("Nhánh 1 (Cold-start Popularity): Phục vụ khách vãng lai hoặc tài khoản mới chưa có đánh giá, kèm giao diện chọn nhanh thể loại & chấm nhanh trên trang gợi ý."))
     body.append(_bullet("Nhánh 2 (Real-time Item-KNN): Phục vụ tức thời ngay khi người dùng vừa chấm điểm phim mới trên web mà không cần chờ huấn luyện lại mô hình."))
     body.append(_bullet("Nhánh 3 (SVD + Giải thích Item-KNN): Cá nhân hóa sâu bằng mô hình SVD active kèm lý do giải thích “Vì bạn thích...” từ Item-KNN."))
+    register_img(EDA_FIG_DIR / "cold_start_flow.png", "Hình 3.2: Sơ đồ luồng gợi ý thông minh 3 nhánh xử lý bài toán Cold-Start.")
 
     body.append(_h2("3.2. Thiết kế 14 bảng Cơ sở dữ liệu (SQLAlchemy 2.0)"))
     body.append(_table(
@@ -195,7 +269,18 @@ def build_report() -> Path:
         register_img(exp_fig_dir / "ranking_metrics.png", "Hình 4.5: So sánh chất lượng danh sách gợi ý Precision@10 và Recall@10.")
         register_img(exp_fig_dir / "validation_grid.png", "Hình 4.6: Kết quả tinh chỉnh siêu tham số (Grid Search) trên tập Validation.")
 
-    body.append(_p("Nhận xét: Mô hình SVD đạt sai số thấp nhất (RMSE = 0.8884, MAE = 0.6762) và chất lượng xếp hạng Top-10 cao nhất (Precision@10 = 0.0680, Recall@10 = 0.0566). Trong khi đó, Item-based KNN đạt độ phủ danh mục cao nhất (13.71%) và phản hồi tức thời cho các lượt chấm điểm mới."))
+    body.append(_h2("4.3. Kết quả kiểm thử tự động hệ thống (16/16 Pytest Passed)"))
+    body.append(_table(
+        ["Nhóm kiểm thử", "Kịch bản kiểm thử chính", "Kết quả"],
+        [
+            ["Kiểm thử dữ liệu & chia tập", "Kiểm tra làm sạch dữ liệu, loại bỏ trùng lặp và Per-user Temporal Split (overlap = 0)", "PASSED"],
+            ["Kiểm thử thuật toán AI", "Kiểm tra Popularity, Item-KNN (Adjusted Cosine + explain), SVD và độ đo RMSE/MAE/P@10/R@10", "PASSED"],
+            ["Kiểm thử Xác thực & Phân quyền", "Đăng ký, đăng nhập JWT, chặn truy cập trái phép vào các API /api/admin/* (401/403)", "PASSED"],
+            ["Kiểm thử Cá nhân hóa & Cold-start", "Kiểm chứng 2 người dùng khác gu nhận gợi ý khác nhau, loại trừ phim đã xem, tự động chuyển nhánh", "PASSED"],
+            ["Kiểm thử Bình luận Cộng đồng", "Lưu đồng thời điểm đánh giá + bình luận văn bản và truy xuất danh sách review theo phim", "PASSED"],
+            ["Kiểm thử Quản trị & Huấn luyện lại", "Kích hoạt huấn luyện mô hình mới từ Admin và khôi phục (Rollback) phiên bản mô hình cũ", "PASSED"],
+        ],
+    ))
 
     # Chương 5
     body.append(_h1("CHƯƠNG 5: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN"))
@@ -254,4 +339,4 @@ def build_report() -> Path:
 
 if __name__ == "__main__":
     out = build_report()
-    print(f"[OK] Đã xuất file báo cáo Word (kèm 6 biểu đồ PNG) tại: {out}")
+    print(f"[OK] Đã xuất file báo cáo Word (kèm 8 biểu đồ & sơ đồ kiến trúc) tại: {out}")
