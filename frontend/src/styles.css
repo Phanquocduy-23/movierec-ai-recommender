@@ -1537,3 +1537,211 @@ label.check {
   color: #f8fafc;
 }
 
+/* Streaming Portal Enhancements (Inspired by GhienPhim & AnimeVietSub) */
+.badge-quality {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.breadcrumb-bar .current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.seo-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.seo-tag {
+  font-size: 0.78rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  padding: 2px 9px;
+  border-radius: 6px;
+}
+
+.seo-tag:hover {
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Cinema Watch Room & Theater Mode */
+.theater-dim-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 17, 0.93);
+  z-index: 140;
+  cursor: pointer;
+}
+
+.watch-room-card {
+  background: var(--bg-card);
+  border: 1px solid var(--primary);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.watch-room-card.lights-off-focus {
+  position: relative;
+  z-index: 150;
+  background: #090d16;
+  color: #f8fafc;
+  box-shadow: 0 0 80px rgba(99, 102, 241, 0.45);
+}
+
+.watch-room-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.server-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.episode-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+/* Superfan Bar & Spoiler Blur */
+.superfan-bar {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(99, 102, 241, 0.08));
+}
+
+.superfan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.spoiler-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.spoiler-check input {
+  width: auto;
+  margin: 0;
+}
+
+.spoiler-box {
+  position: relative;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.spoiler-blurred {
+  margin: 0;
+  filter: blur(6px);
+  user-select: none;
+  flex: 1;
+}
+
+/* Floating AI Movie Assistant */
+.floating-assistant-wrap {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 95;
+}
+
+.floating-assistant-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.55);
+  transition: transform 0.15s;
+}
+
+.floating-assistant-btn:hover {
+  transform: translateY(-2px);
+}
+
+.floating-assistant-panel {
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  margin-bottom: 12px;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.75);
+  border-color: var(--primary);
+}
+
+.assistant-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.assistant-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+

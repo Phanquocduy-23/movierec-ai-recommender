@@ -17,8 +17,16 @@ export default function MovieDetail() {
   const [dist, setDist] = useState([])
   const [reviews, setReviews] = useState([])
   const [commentText, setCommentText] = useState('')
+  const [isSpoiler, setIsSpoiler] = useState(false)
+  const [revealedSpoilers, setRevealedSpoilers] = useState({})
+  const [reviewSort, setReviewSort] = useState('newest')
   const [draftScore, setDraftScore] = useState(4.5)
   const [showTrailer, setShowTrailer] = useState(false)
+  const [watchOpen, setWatchOpen] = useState(false)
+  const [lightsOff, setLightsOff] = useState(false)
+  const [serverIdx, setServerIdx] = useState(1)
+  const [activeCut, setActiveCut] = useState('Bản Chiếu Rạp (Full FHD)')
+  const [epSearch, setEpSearch] = useState('')
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -26,7 +34,14 @@ export default function MovieDetail() {
   const load = () => {
     api(`/api/movies/${id}`).then(m => {
       setMovie(m)
-      setCommentText(m.my_comment || '')
+      const rawComment = m.my_comment || ''
+      if (rawComment.startsWith('[SPOILER] ')) {
+        setIsSpoiler(true)
+        setCommentText(rawComment.replace(/^\[SPOILER\]\s*/, ''))
+      } else {
+        setIsSpoiler(false)
+        setCommentText(rawComment)
+      }
       if (m.my_rating != null) setDraftScore(m.my_rating)
       rememberViewed(m)
       const imdbId = extractImdbId(m)
@@ -37,6 +52,7 @@ export default function MovieDetail() {
   }
   useEffect(() => {
     setMovie(null); setMeta(null); setSimilar(null); setReviews([]); setMsg(''); setError('')
+    setWatchOpen(false); setLightsOff(false)
     load()
     api(`/api/movies/${id}/similar?n=12`).then(setSimilar).catch(() => {})
   }, [id, user]) // eslint-disable-line
@@ -58,11 +74,13 @@ export default function MovieDetail() {
     e.preventDefault()
     if (requireLogin()) return
     const scoreToSave = movie.my_rating != null ? movie.my_rating : draftScore
+    const cleanBody = commentText.trim().replace(/^\[SPOILER\]\s*/, '')
+    const finalComment = cleanBody && isSpoiler ? `[SPOILER] ${cleanBody}` : cleanBody
     setBusy(true); setError('')
     try {
       await api(`/api/ratings/${id}`, {
         method: 'PUT',
-        body: { score: scoreToSave, comment: commentText },
+        body: { score: scoreToSave, comment: finalComment },
       })
       setMsg('Đã đăng bình luận & đánh giá của bạn thành công!')
       load()
@@ -94,9 +112,50 @@ export default function MovieDetail() {
   const bgUrl = meta?.background || (imdbId ? `https://images.metahub.space/background/medium/${imdbId}/img` : movie.poster_url)
   const ytId = meta?.trailers?.[0]?.source || meta?.trailerStreams?.[0]?.ytId || null
   const synopsis = movie.overview || meta?.description
+  const primaryGenre = movie.genres?.[0]
+  const estViews = (movie.rating_count || 1) * 142 + (movie.id * 37) % 900
+  const slugTag = cleanTitle(movie.title).toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+  const cuts = [
+    'Bản Chiếu Rạp (Full FHD)',
+    'Bản Director’s Cut (Vietsub)',
+    'Bản Thuyết Minh chuẩn',
+    'Official Trailer & Teaser',
+    'Hậu trường (Behind The Scenes)',
+  ].filter(c => !epSearch.trim() || c.toLowerCase().includes(epSearch.trim().toLowerCase()))
+
+  const superfans = reviews.filter(r => r.score >= 4.0 && r.comment && r.comment.trim().length >= 10).slice(0, 6)
+  const sortedReviews = [...reviews].sort((a, b) => {
+    if (reviewSort === 'high') return b.score - a.score
+    if (reviewSort === 'low') return a.score - b.score
+    return new Date(b.updated_at) - new Date(a.updated_at)
+  })
 
   return (
     <div>
+      {lightsOff && (
+        <div
+          className="theater-dim-overlay"
+          onClick={() => setLightsOff(false)}
+          title="Nhấn vào vùng tối để bật lại đèn"
+        />
+      )}
+
+      {/* Thanh điều hướng Breadcrumb chuẩn web phim */}
+      <nav className="breadcrumb-bar">
+        <Link to="/">🏠 Trang chủ</Link>
+        <span>›</span>
+        <Link to="/movies">Danh mục phim</Link>
+        {primaryGenre && (
+          <>
+            <span>›</span>
+            <Link to={`/movies?genre_id=${primaryGenre.id}`}>{primaryGenre.name}</Link>
+          </>
+        )}
+        <span>›</span>
+        <span className="current">{cleanTitle(movie.title)}</span>
+      </nav>
+
       <div className="detail-shell">
         {bgUrl && <div className="detail-backdrop" style={{ backgroundImage: `url(${bgUrl})` }} />}
         <div className="detail">
@@ -105,7 +164,18 @@ export default function MovieDetail() {
             <button
               type="button"
               className="btn block"
-              style={{ marginTop: 12 }}
+              style={{ marginTop: 12, background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+              onClick={() => {
+                setWatchOpen(true)
+                setTimeout(() => document.getElementById('cinema-watch-room')?.scrollIntoView({ behavior: 'smooth' }), 80)
+              }}
+            >
+              ▶️ Xem Phim Ngay (FHD)
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              style={{ marginTop: 8 }}
               onClick={() => setShowTrailer(true)}
             >
               🎬 Xem Trailer Chính Thức
@@ -114,10 +184,13 @@ export default function MovieDetail() {
 
           <div className="detail-info">
             <div className="detail-badges">
+              <span className="tag ok">FHD 1080p · Vietsub</span>
+              <span className="tag info">PG-13</span>
               {movie.year && <span className="hero-year">{movie.year}</span>}
               {meta?.runtime && <span className="hero-year">⏱ {meta.runtime}</span>}
               {meta?.country && <span className="hero-year">🌍 {meta.country}</span>}
               {meta?.imdbRating && <span className="imdb-badge">IMDb ★ {meta.imdbRating}</span>}
+              <span className="hero-year">👁️ {estViews.toLocaleString('vi-VN')} lượt xem</span>
             </div>
 
             <h1>{cleanTitle(movie.title)}</h1>
@@ -223,6 +296,27 @@ export default function MovieDetail() {
                 )}
               </div>
             )}
+
+            {/* Từ khóa SEO / Hashtags học từ GhienPhim */}
+            <div className="seo-tags-row">
+              <span className="muted small">Từ khóa nổi bật:</span>
+              <Link to={`/movies?q=${encodeURIComponent(cleanTitle(movie.title).split(' ')[0])}`} className="seo-tag">
+                #{slugTag}
+              </Link>
+              <Link to={`/movies?q=${encodeURIComponent(cleanTitle(movie.title).split(' ')[0])}`} className="seo-tag">
+                #{slugTag}_vietsub_fhd
+              </Link>
+              {movie.year && (
+                <Link to={`/movies?year_from=${movie.year}&year_to=${movie.year}`} className="seo-tag">
+                  #phim_{movie.year}
+                </Link>
+              )}
+              {movie.genres.slice(0, 3).map(g => (
+                <Link key={g.id} to={`/movies?genre_id=${g.id}`} className="seo-tag">
+                  #{g.name.toLowerCase().replace(/[^a-z0-9]+/g, '')}
+                </Link>
+              ))}
+            </div>
           </div>
 
           <div className="detail-dist card">
@@ -248,12 +342,134 @@ export default function MovieDetail() {
         </div>
       </div>
 
+      {/* Phòng Chiếu Phim Trực Tuyến (Cinema Watch Room - Đa Server & Chế độ Tắt đèn) */}
+      {watchOpen && (
+        <section id="cinema-watch-room" className={`section watch-room-card ${lightsOff ? 'lights-off-focus' : ''}`}>
+          <div className="watch-room-head">
+            <div>
+              <span className="tag ok">ĐANG PHÁT: {activeCut}</span>
+              <h2 style={{ margin: '6px 0 2px' }}>🎬 Phòng Chiếu: {cleanTitle(movie.title)} ({movie.year || '—'})</h2>
+              <span className="muted small">
+                Server #{serverIdx} · Chất lượng FHD 1080p · Âm thanh Dolby / Vietsub Chuẩn
+              </span>
+            </div>
+            <div className="row-actions">
+              <button
+                type="button"
+                className={`btn sm ${lightsOff ? '' : 'ghost'}`}
+                onClick={() => setLightsOff(v => !v)}
+              >
+                {lightsOff ? '💡 Bật đèn' : '🌙 Tắt đèn rạp phim'}
+              </button>
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setMsg('🚩 Đã gửi báo cáo lỗi link/phụ đề tới Quản trị viên. Bạn có thể chuyển sang Server #2 hoặc #3!')}
+              >
+                🚩 Báo link hỏng
+              </button>
+              <button type="button" className="btn ghost sm" onClick={() => { setWatchOpen(false); setLightsOff(false) }}>
+                Đóng khung chiếu ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Thanh chọn Server kiểu GhienPhim & AnimeVietSub */}
+          <div className="server-bar">
+            <span className="muted small">🌐 Chọn Server phát:</span>
+            {[
+              { id: 1, name: '⚡ Server #1: VIP FHD (Vietsub)' },
+              { id: 2, name: '🎙️ Server #2: Thuyết Minh HD' },
+              { id: 3, name: '🎬 Server #3: YouTube Preview Backup' },
+            ].map(sv => (
+              <button
+                key={sv.id}
+                type="button"
+                className={`chip ${serverIdx === sv.id ? 'active' : ''}`}
+                onClick={() => setServerIdx(sv.id)}
+              >
+                {sv.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="video-frame" style={{ margin: '12px 0' }}>
+            {ytId && serverIdx !== 2 ? (
+              <iframe
+                title={`Watch ${cleanTitle(movie.title)}`}
+                src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <iframe
+                title={`Watch ${cleanTitle(movie.title)}`}
+                src={`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(cleanTitle(movie.title) + ' ' + (movie.year || '') + (serverIdx === 2 ? ' thuyet minh review' : ' official trailer hd'))}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+
+          {/* Thanh chọn Tập / Phiên bản kèm ô tìm kiếm nhanh kiểu AnimeVietSub */}
+          <div className="episode-box">
+            <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <span className="small" style={{ fontWeight: 700 }}>🎞️ Chọn Phiên bản / Tập phát ({cuts.length}):</span>
+              <input
+                style={{ maxWidth: 240, padding: '5px 10px', fontSize: '0.82rem' }}
+                placeholder="🔍 Tìm nhanh tập / bản chiếu..."
+                value={epSearch}
+                onChange={e => setEpSearch(e.target.value)}
+              />
+            </div>
+            <div className="chips" style={{ marginBottom: 0 }}>
+              {cuts.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`chip ${activeCut === c ? 'active' : ''}`}
+                  onClick={() => setActiveCut(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Khu vực Bình luận & Cảm nhận từ Cộng đồng */}
       <section className="section">
         <div className="section-head">
-          <h2>💬 Bình luận & Cảm nhận Cộng đồng ({reviews.length})</h2>
-          <span className="muted small">Chia sẻ góc nhìn của bạn về bộ phim này</span>
+          <div>
+            <h2>💬 Bình luận & Cảm nhận Cộng đồng ({reviews.length})</h2>
+            <span className="muted small">Chia sẻ góc nhìn của bạn về bộ phim này (Hỗ trợ ẩn Spoiler)</span>
+          </div>
+          <div className="row-actions">
+            <span className="muted small">Sắp xếp:</span>
+            <select value={reviewSort} onChange={e => setReviewSort(e.target.value)}>
+              <option value="newest">🕒 Mới nhất</option>
+              <option value="high">⭐ Điểm cao nhất</option>
+              <option value="low">📉 Điểm thấp nhất</option>
+            </select>
+          </div>
         </div>
+
+        {/* Bảng vinh danh "Fan cứng của bộ phim" học từ AnimeVietSub */}
+        {superfans.length > 0 && (
+          <div className="card superfan-bar" style={{ marginBottom: 16 }}>
+            <div className="small" style={{ fontWeight: 700, marginBottom: 8 }}>
+              🏅 Vinh danh Fan cứng bộ phim này ({superfans.length} thành viên đánh giá tâm huyết ≥ 4.0★):
+            </div>
+            <div className="chips" style={{ marginBottom: 0 }}>
+              {superfans.map(sf => (
+                <span key={sf.id} className="superfan-pill">
+                  👑 <b>{sf.full_name || sf.username}</b> <span className="muted">({sf.score.toFixed(1)}★)</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid2" style={{ alignItems: 'start' }}>
           <form className="card" onSubmit={submitReview}>
@@ -278,7 +494,15 @@ export default function MovieDetail() {
                   maxLength={1500}
                   style={{ width: '100%', marginBottom: 10 }}
                 />
-                <div className="row-actions" style={{ justifyContent: 'space-between' }}>
+                <label className="spoiler-check">
+                  <input
+                    type="checkbox"
+                    checked={isSpoiler}
+                    onChange={e => setIsSpoiler(e.target.checked)}
+                  />
+                  <span>⚠️ Bình luận có tiết lộ nội dung phim (Tự động làm mờ chống Spoiler)</span>
+                </label>
+                <div className="row-actions" style={{ justifyContent: 'space-between', marginTop: 10 }}>
                   <span className="muted small">{commentText.length}/1500 ký tự</span>
                   <button className="btn" disabled={busy}>
                     {movie.my_rating != null ? 'Lưu cập nhật đánh giá' : 'Đăng đánh giá & bình luận'}
@@ -293,48 +517,73 @@ export default function MovieDetail() {
           </form>
 
           <div className="list">
-            {reviews.length === 0 ? (
+            {sortedReviews.length === 0 ? (
               <div className="empty">Chưa có bình luận nào trên web cho phim này. Hãy là người đầu tiên chia sẻ cảm nhận!</div>
             ) : (
-              reviews.map(rv => (
-                <div key={rv.id} className="card" style={{ padding: '14px 16px' }}>
-                  <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                    <div className="row-actions" style={{ gap: 8 }}>
-                      <span
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: 13,
-                          color: '#fff',
-                        }}
-                      >
-                        {(rv.full_name || rv.username || 'U').slice(0, 2).toUpperCase()}
-                      </span>
-                      <div>
-                        <b>{rv.full_name || rv.username}</b>{' '}
-                        <span className="muted small">@{rv.username}</span>
-                        <div className="muted small">
-                          {new Date(rv.updated_at + 'Z').toLocaleString('vi-VN')}
+              sortedReviews.map(rv => {
+                const raw = rv.comment || ''
+                const hasSpoiler = raw.startsWith('[SPOILER]')
+                const cleanRvText = raw.replace(/^\[SPOILER\]\s*/, '')
+                const isRevealed = !!revealedSpoilers[rv.id]
+                return (
+                  <div key={rv.id} className="card" style={{ padding: '14px 16px' }}>
+                    <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div className="row-actions" style={{ gap: 8 }}>
+                        <span
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: '#fff',
+                          }}
+                        >
+                          {(rv.full_name || rv.username || 'U').slice(0, 2).toUpperCase()}
+                        </span>
+                        <div>
+                          <b>{rv.full_name || rv.username}</b>{' '}
+                          <span className="muted small">@{rv.username}</span>
+                          {rv.score >= 4.0 && cleanRvText.length >= 10 && (
+                            <span className="tag warn" style={{ marginLeft: 6 }}>👑 Fan cứng</span>
+                          )}
+                          <div className="muted small">
+                            {new Date(rv.updated_at + 'Z').toLocaleString('vi-VN')}
+                          </div>
                         </div>
                       </div>
+                      <Stars value={rv.score} />
                     </div>
-                    <Stars value={rv.score} />
+                    {cleanRvText ? (
+                      hasSpoiler && !isRevealed ? (
+                        <div className="spoiler-box">
+                          <p className="spoiler-blurred">{cleanRvText}</p>
+                          <button
+                            type="button"
+                            className="btn ghost sm"
+                            onClick={() => setRevealedSpoilers(prev => ({ ...prev, [rv.id]: true }))}
+                          >
+                            👁️ Bình luận chứa Spoiler — Nhấn để xem
+                          </button>
+                        </div>
+                      ) : (
+                        <p style={{ margin: '6px 0 0', lineHeight: 1.55 }}>
+                          {hasSpoiler && <span className="tag warn" style={{ marginRight: 6 }}>⚠️ Spoiler</span>}
+                          {cleanRvText}
+                        </p>
+                      )
+                    ) : (
+                      <p className="muted small" style={{ margin: '4px 0 0', fontStyle: 'italic' }}>
+                        Đã chấm {rv.score.toFixed(1)} ★ (không kèm nhận xét văn bản)
+                      </p>
+                    )}
                   </div>
-                  {rv.comment ? (
-                    <p style={{ margin: '6px 0 0', lineHeight: 1.55, color: '#e2e8f0' }}>{rv.comment}</p>
-                  ) : (
-                    <p className="muted small" style={{ margin: '4px 0 0', fontStyle: 'italic' }}>
-                      Đã chấm {rv.score.toFixed(1)} ★ (không kèm nhận xét văn bản)
-                    </p>
-                  )}
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>

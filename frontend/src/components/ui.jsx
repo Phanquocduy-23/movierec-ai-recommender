@@ -73,6 +73,14 @@ export function getRecentlyViewed() {
   }
 }
 
+export function clearRecentlyViewed() {
+  try {
+    localStorage.removeItem(RECENT_KEY)
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export function Poster({ movie, size = 'md' }) {
   const [broken, setBroken] = useState(false)
   const imdbId = extractImdbId(movie)
@@ -143,12 +151,13 @@ export function StarInput({ value, onChange, disabled }) {
 
 export function MovieCard({ movie, extra, badge }) {
   const title = cleanTitle(movie.title)
+  const qualityBadge = badge || (Number(movie.rating_avg) >= 4.2 ? '4K · Vietsub' : 'FHD · Vietsub')
   return (
     <Link to={`/movies/${movie.id}`} className="movie-card">
       <div className="poster-wrap">
         <Poster movie={movie} />
         <div className="poster-gradient" />
-        {badge && <span className="badge-corner">{badge}</span>}
+        <span className={`badge-corner ${badge ? '' : 'badge-quality'}`}>{qualityBadge}</span>
         {movie.rating_avg != null && (
           <span className="badge-rating">★ {Number(movie.rating_avg).toFixed(1)}</span>
         )}

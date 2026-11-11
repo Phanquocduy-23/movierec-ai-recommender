@@ -202,6 +202,7 @@ export default function App() {
           <Route path="*" element={<div className="empty">Không tìm thấy trang</div>} />
         </Routes>
       </main>
+      <FloatingMovieAssistant />
       {showTop && (
         <button
           type="button"
@@ -246,5 +247,130 @@ export default function App() {
         </div>
       </footer>
     </>
+  )
+}
+
+function FloatingMovieAssistant() {
+  const [open, setOpen] = useState(false)
+  const [genres, setGenres] = useState([])
+  const [genreId, setGenreId] = useState('')
+  const [era, setEra] = useState('any')
+  const [minVotes, setMinVotes] = useState(30)
+  const [picks, setPicks] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (open && genres.length === 0) {
+      api('/api/genres').then(setGenres).catch(() => {})
+      findMovies('', 'any', 30)
+    }
+  }, [open]) // eslint-disable-line
+
+  const findMovies = (gId = genreId, eraVal = era, votes = minVotes) => {
+    setLoading(true)
+    const params = new URLSearchParams({ sort: 'rating', min_ratings: String(votes), size: '24' })
+    if (gId) params.set('genre_id', gId)
+    if (eraVal === 'modern') params.set('year_from', '2010')
+    if (eraVal === '2000s') { params.set('year_from', '2000'); params.set('year_to', '2009') }
+    if (eraVal === '90s') { params.set('year_from', '1990'); params.set('year_to', '1999') }
+    if (eraVal === 'classic') params.set('year_to', '1989')
+    api(`/api/movies?${params.toString()}`)
+      .then(d => {
+        const list = [...(d.items || [])]
+        for (let i = list.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[list[i], list[j]] = [list[j], list[i]]
+        }
+        setPicks(list.slice(0, 3))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  return (
+    <div className="floating-assistant-wrap">
+      {open && (
+        <div className="floating-assistant-panel card">
+          <div className="row-actions" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+            <div>
+              <b>🤖 Trợ lý Chọn Phim Theo Ý Bạn</b>
+              <div className="muted small">Chưa biết tối nay xem gì? Để AI chọn giúp!</div>
+            </div>
+            <button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>✕</button>
+          </div>
+
+          <div className="assistant-filters">
+            <select
+              value={genreId}
+              onChange={e => { setGenreId(e.target.value); findMovies(e.target.value, era, minVotes) }}
+            >
+              <option value="">🎭 Mọi thể loại</option>
+              {genres.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <select
+              value={era}
+              onChange={e => { setEra(e.target.value); findMovies(genreId, e.target.value, minVotes) }}
+            >
+              <option value="any">🕰️ Mọi thời đại</option>
+              <option value="modern">🔥 Hiện đại (2010 – nay)</option>
+              <option value="2000s">💿 Thập niên 2000s</option>
+              <option value="90s">📼 Kinh điển 1990s</option>
+              <option value="classic">🏛️ Cổ điển (&lt; 1990)</option>
+            </select>
+            <select
+              value={minVotes}
+              onChange={e => { const v = Number(e.target.value); setMinVotes(v); findMovies(genreId, era, v) }}
+            >
+              <option value={10}>💎 Kể cả Viên ngọc ẩn (≥10 lượt)</option>
+              <option value={30}>⭐ Phổ biến vừa (≥30 lượt)</option>
+              <option value={80}>🏆 Bom tấn nổi tiếng (≥80 lượt)</option>
+            </select>
+          </div>
+
+          <div className="assistant-results">
+            {loading ? (
+              <div className="muted small" style={{ padding: 14, textAlign: 'center' }}>Đang lọc kho phim...</div>
+            ) : picks.length === 0 ? (
+              <div className="muted small" style={{ padding: 14, textAlign: 'center' }}>Không có phim khớp bộ lọc này. Hãy thử nới tiêu chí!</div>
+            ) : (
+              picks.map(m => (
+                <Link
+                  key={m.id}
+                  to={`/movies/${m.id}`}
+                  className="search-item"
+                  style={{ borderRadius: 8 }}
+                  onClick={() => setOpen(false)}
+                >
+                  <Poster movie={m} size="sm" />
+                  <div className="search-item-info">
+                    <div className="search-item-title">{cleanTitle(m.title)}</div>
+                    <div className="muted small">
+                      {m.year || '—'} · <Stars value={m.rating_avg} /> ({m.rating_count})
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+
+          <div className="row-actions" style={{ justifyContent: 'space-between', marginTop: 10 }}>
+            <button type="button" className="btn sm" onClick={() => findMovies(genreId, era, minVotes)}>
+              🎲 Đổi 3 phim khác
+            </button>
+            <Link to="/recommendations" className="btn ghost sm" onClick={() => setOpen(false)}>
+              Gợi ý AI chuyên sâu →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="floating-assistant-btn"
+        onClick={() => setOpen(v => !v)}
+      >
+        🤖 {open ? 'Đóng trợ lý' : 'Chọn phim theo ý bạn!'}
+      </button>
+    </div>
   )
 }

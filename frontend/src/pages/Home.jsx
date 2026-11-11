@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import {
-  cleanTitle, ErrorBox, extractImdbId, fetchCinemeta, getRecentlyViewed,
+  cleanTitle, clearRecentlyViewed, ErrorBox, extractImdbId, fetchCinemeta, getRecentlyViewed,
   Loading, METHOD_LABEL, MovieCard, Poster, Stars, TrailerModal,
 } from '../components/ui'
 
@@ -285,9 +285,22 @@ export default function Home() {
       </Section>
 
       {recent.length > 0 && (
-        <Section title="🕒 Phim bạn vừa xem gần đây" link="/movies">
+        <section className="section">
+          <div className="section-head">
+            <h2>🕒 Phim bạn vừa xem gần đây ({recent.length})</h2>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => { clearRecentlyViewed(); setRecent([]) }}
+              >
+                🗑️ Xóa lịch sử xem
+              </button>
+              <Link to="/movies">Xem tất cả →</Link>
+            </div>
+          </div>
           <Grid items={recent} />
-        </Section>
+        </section>
       )}
 
       <Section title="🔥 Thịnh hành (Được đánh giá nhiều nhất)" link="/movies?sort=popular">

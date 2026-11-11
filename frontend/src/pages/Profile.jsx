@@ -90,6 +90,70 @@ export default function Profile() {
     URL.revokeObjectURL(url)
   }
 
+  const exportJsonBackup = () => {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      username: user.username,
+      ratings: (ratings?.items || []).map(r => ({
+        movie_id: r.movie_id,
+        score: r.score,
+        comment: r.comment || null,
+      })),
+      watchlist_ids: watchlist.map(w => w.movie_id || w.movie?.id).filter(Boolean),
+      recently_viewed: JSON.parse(localStorage.getItem('movierec_recently_viewed') || '[]'),
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    Object.assign(document.createElement('a'), {
+      href: url,
+      download: `movierec_backup_${user.username}.json`,
+    }).click()
+    URL.revokeObjectURL(url)
+  }
+
+  const importJsonBackup = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setMsg(''); setError('')
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (Array.isArray(data.recently_viewed)) {
+        localStorage.setItem('movierec_recently_viewed', JSON.stringify(data.recently_viewed.slice(0, 12)))
+      }
+      let restoredRatings = 0
+      if (Array.isArray(data.ratings)) {
+        for (const r of data.ratings.slice(0, 100)) {
+          if (r.movie_id && r.score) {
+            await api(`/api/ratings/${r.movie_id}`, {
+              method: 'PUT',
+              body: { score: Number(r.score), comment: r.comment || null },
+            }).catch(() => {})
+            restoredRatings++
+          }
+        }
+      }
+      let restoredWatch = 0
+      if (Array.isArray(data.watchlist_ids)) {
+        for (const mid of data.watchlist_ids.slice(0, 100)) {
+          await api(`/api/watchlist/${mid}`, { method: 'POST' }).catch(() => {})
+          restoredWatch++
+        }
+      }
+      const [freshRatings, freshWatch] = await Promise.all([
+        api('/api/ratings/me?size=200'),
+        api('/api/watchlist'),
+      ])
+      setRatings(freshRatings)
+      setWatchlist(freshWatch)
+      setMsg(`✅ Đã khôi phục thành công ${restoredRatings} đánh giá, ${restoredWatch} phim Muốn xem và lịch sử xem gần đây!`)
+    } catch {
+      setError('File sao lưu không hợp lệ. Vui lòng chọn đúng file .json xuất từ MovieRec.')
+    } finally {
+      e.target.value = ''
+    }
+  }
+
   const submit = async (e) => {
     e.preventDefault(); setMsg(''); setError('')
     const body = { full_name: form.full_name }
@@ -185,6 +249,22 @@ export default function Profile() {
           {msg && <div className="alert ok">{msg}</div>}
           <ErrorBox error={error} />
           <button className="btn block" style={{ marginTop: 12 }}>Lưu thay đổi</button>
+
+          <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <h3 style={{ marginTop: 0 }}>💾 Sao lưu & Khôi phục dữ liệu (Data Recovery)</h3>
+            <p className="muted small">
+              Sao lưu toàn bộ điểm chấm, bình luận, danh sách Muốn xem và lịch sử vừa xem ra file <code>.json</code> hoặc khôi phục lại bất cứ lúc nào.
+            </p>
+            <div className="row-actions">
+              <button type="button" className="btn ghost sm" onClick={exportJsonBackup}>
+                💾 Tải file Sao lưu (.JSON)
+              </button>
+              <label className="btn ghost sm" style={{ cursor: 'pointer', margin: 0 }}>
+                📂 Khôi phục từ file (.JSON)
+                <input type="file" accept=".json,application/json" onChange={importJsonBackup} style={{ display: 'none' }} />
+              </label>
+            </div>
+          </div>
         </form>
       </div>
     </div>
