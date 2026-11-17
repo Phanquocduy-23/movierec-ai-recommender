@@ -187,25 +187,25 @@ def build_slides() -> Path:
 
         # SLIDE 10: Tính năng nổi bật giao diện Người dùng
         fig, ax = new_slide(10, title="9. TÍNH NĂNG GIAO DIỆN NGƯỜI DÙNG (REACTJS 18)",
-                            subtitle="Trải nghiệm hoàn chỉnh như một nền tảng khám phá điện ảnh thực tế")
+                            subtitle="Trải nghiệm hoàn chỉnh như một nền tảng xem phim & khám phá điện ảnh thực tế")
         add_bullets(ax, [
-            "Hero Spotlight Carousel, Tìm kiếm nhanh tức thì (Ctrl+K) có ảnh Poster IMDb thật cho 9.742 phim.",
-            "Trang Chi tiết phim: Tóm tắt nội dung, Đạo diễn, Diễn viên, Giải thưởng, Xem Trailer YouTube & Bình luận Cộng đồng.",
-            "Phòng Thí Nghiệm AI: Đối chiếu trực tiếp 3 cột SVD vs. Item-KNN vs. Popularity song song trên 1 màn hình.",
-            "Khám phá theo Tâm Trạng (Mood Matcher), Bốc thăm phim ngẫu nhiên & Khởi tạo nhanh Cold-Start 1-click.",
-            "Dashboard Hồ sơ Cá nhân: Thống kê phong cách chấm điểm, biểu đồ thập niên yêu thích & Xuất CSV/Excel.",
+            "Phòng Chiếu Phim Trực Tuyến (Cinema Watch Room): Chuyển đổi 3 Server, Chế độ Tắt đèn rạp phim & Báo lỗi link.",
+            "Phòng Thí Nghiệm AI: Đối chiếu 3 cột SVD vs. Item-KNN vs. Popularity song song & Đối chiếu 2 bộ phim (Double Feature).",
+            "Bảng xếp hạng Trọng số Bayes động (/leaderboard): Thay đổi trực tiếp tham số m, lọc Viên Ngọc Ẩn & Quán quân 20 thể loại.",
+            "Cộng đồng & Tiện ích: Vinh danh Fan cứng, Làm mờ bình luận Spoiler, Trợ lý nổi chọn phim & Giao diện Sáng/Tối.",
+            "Dashboard Hồ sơ Cá nhân: Thống kê phong cách chấm điểm, xuất báo cáo CSV/Excel & Sao lưu/Khôi phục hồ sơ .JSON.",
         ])
         pdf.savefig(fig)
         plt.close(fig)
 
         # SLIDE 11: Phân hệ Quản trị Admin & Kiểm thử tự động
         fig, ax = new_slide(11, title="10. CỔNG QUẢN TRỊ ADMIN & KIỂM THỬ TỰ ĐỘNG",
-                            subtitle="7 phân hệ Quản trị viên + Vượt qua 16/16 kịch bản kiểm thử tự động Pytest (100% PASSED)")
+                            subtitle="7 phân hệ Quản trị viên + Vượt qua 18/18 kịch bản kiểm thử tự động Pytest (100% PASSED)")
         add_bullets(ax, [
             "Admin Portal 7 phân hệ: Thống kê tổng quan, Quản lý Phim, Thể loại, Người dùng, Nạp CSV, Mô hình AI, Thực nghiệm.",
+            "Nhật ký Telemetry AI thời gian thực (/api/admin/recommendation-logs) & Kiểm duyệt bình luận cộng đồng.",
             "Cho phép Admin kích hoạt Huấn luyện lại mô hình (Retrain) trên nền và Khôi phục phiên bản cũ (Rollback).",
-            "16/16 bài kiểm thử tự động Pytest PASSED: Kiểm thử thuật toán, JWT RBAC, Cold-start, Bình luận & Retrain.",
-            "Đóng gói sẵn Docker Compose (PostgreSQL 16 + FastAPI + React) và GitHub Actions CI/CD.",
+            "18/18 bài kiểm thử tự động Pytest PASSED: Thuật toán AI, JWT RBAC, Cold-start, Bảng xếp hạng, Đối chiếu phim & Admin.",
         ])
         pdf.savefig(fig)
         plt.close(fig)

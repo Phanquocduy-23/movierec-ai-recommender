@@ -6,7 +6,7 @@
 ![React](https://img.shields.io/badge/React-18.3_(Vite)-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-SQLAlchemy_2.0-4169E1?logo=postgresql&logoColor=white)
 ![Scikit-Learn](https://img.shields.io/badge/AI-Item--KNN_%7C_SVD-F7931E?logo=scikitlearn&logoColor=white)
-![Tests](https://img.shields.io/badge/Pytest-15%2F15_Passed-10B981?logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Pytest-18%2F18_Passed-10B981?logo=pytest&logoColor=white)
 
 > **Đồ án Cơ sở 2 — Ngành Công nghệ Thông tin**  
 > **Sinh viên thực hiện:** Phan Quốc Duy · **MSSV:** `235019` · **Lớp:** `DH23TIN05`  
@@ -23,8 +23,11 @@
 2. **Kiến trúc Phục vụ Trực tuyến & Chống Rò rỉ Dữ liệu (Production-Grade Serving):**
    - Tách biệt hoàn toàn định danh người dùng nghiên cứu MovieLens (`ml:<id>`) và tài khoản thực trên web (`web:<id>`).
    - Quản lý vòng đời mô hình (**Model Registry**): Huấn luyện nền bất đồng bộ, kiểm tra đầu ra tự động (`validate_bundle`) trước khi kích hoạt, hỗ trợ **Rollback** về phiên bản trước nếu mô hình mới gặp sự cố, kèm bộ nhớ đệm LRU gắn với `(user_id, model_version, ratings_updated_at)`.
-3. **Giao diện Web Điện ảnh Hiện đại (Full-Stack ReactJS + FastAPI):**
-   - Tìm kiếm tức thời (Live Autocomplete Search), Banner Spotlight Carousel 5 phim, phát **Trailer YouTube nhúng**, hiển thị thông tin đạo diễn/diễn viên/giải thưởng/điểm IMDb cho **9.742 bộ phim**, thống kê **Hồ sơ Gu Phim cá nhân**, và cổng Quản trị 7 màn hình (kèm xuất báo cáo CSV và Form Chính–Chi tiết).
+3. **Giao diện Web Điện ảnh & Trải nghiệm Streaming Thực tế (Full-Stack ReactJS + FastAPI):**
+   - **Phòng thí nghiệm Đối sánh 3 Mô hình AI (`Side-by-Side 3-Model Lab`):** So sánh trực quan danh sách gợi ý của `SVD` vs. `Item-KNN` vs. `Popularity` trên cùng một hồ sơ người dùng, kèm xuất báo cáo CSV.
+   - **Bảng xếp hạng Trọng số Bayes động (`/leaderboard`):** Tùy chỉnh trực tiếp siêu tham số ngưỡng $m \in \{10, 25, 50, 100, 200\}$, khám phá **Viên Ngọc Ẩn (`Hidden Gems`)**, **Bom Tấn Đông Khán Giả** và **Quán Quân 20 Thể Loại**.
+   - **Phòng Chiếu Phim Trực Tuyến (`Cinema Watch Room`) & Đối chiếu AI 2 Bộ Phim (`Double Feature`):** Hỗ trợ chuyển đổi 3 Server phát, chế độ **Tắt đèn rạp phim (`Theater Mode`)**, tính độ tương đồng Item-KNN giữa 2 phim bất kỳ và gợi ý 6 bộ phim giao thoa.
+   - **Cộng đồng & Tiện ích thông minh:** Bình luận kèm **Cảnh báo làm mờ Spoiler**, bảng vinh danh **Fan cứng bộ phim**, **Trợ lý nổi chọn phim theo ý bạn**, **Sao lưu/Khôi phục dữ liệu cá nhân (`.JSON`)**, chuyển đổi giao diện **Sáng/Tối (`Light/Dark Mode`)**, và cổng Quản trị 7 phân hệ kèm **Nhật ký Telemetry AI thời gian thực** & **Kiểm duyệt bình luận**.
 
 ---
 
@@ -63,11 +66,11 @@ movie-recommender/
 │   │   ├── models.py         # 14 bảng CSDL chia theo 6 nhóm nghiệp vụ
 │   │   ├── schemas.py        # Pydantic v2 validation schemas
 │   │   └── security.py       # JWT & Bcrypt
-│   └── tests/                # Bộ kiểm thử tự động pytest (15/15 passed)
+│   └── tests/                # Bộ kiểm thử tự động pytest (18/18 passed)
 ├── frontend/                 # Giao diện người dùng & trang quản trị ReactJS (Vite)
 │   └── src/
 │       ├── components/       # MovieCard, StarInput (0.5–5.0), TrailerModal, BarChart, Guards
-│       └── pages/            # Home, Movies, MovieDetail, Recommendations, MyRatings, Watchlist, Admin/*
+│       └── pages/            # Home, Movies, Leaderboard, MovieDetail, Recommendations, Profile, Admin/*
 ├── recsys/                   # Thư viện lõi AI dùng chung cho thực nghiệm offline và phục vụ web
 │   ├── algorithms.py         # PopularityRecommender, ItemKNNRecommender, SVDRecommender
 │   ├── data.py               # Làm sạch dữ liệu, SHA-256, chia tập theo thời gian từng người

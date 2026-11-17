@@ -188,7 +188,7 @@ def build_report() -> Path:
     body.append(_bullet("CHƯƠNG 1: TỔNG QUAN ĐỀ TÀI (Lý do chọn đề tài, Mục tiêu, Phạm vi & Công nghệ sử dụng)"))
     body.append(_bullet("CHƯƠNG 2: CƠ SỞ LÝ THUYẾT (Popularity Bayes, Item-based KNN Adjusted Cosine, Phân rã ma trận SVD & Độ đo đánh giá)"))
     body.append(_bullet("CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG (Kiến trúc 3 tầng, Luồng Cold-Start 3 nhánh, Thiết kế 14 bảng CSDL & Giao diện)"))
-    body.append(_bullet("CHƯƠNG 4: THỰC NGHIỆM, CÀI ĐẶT VÀ KIỂM THỬ (Tiền xử lý MovieLens, Kết quả thực nghiệm AI & 16 kịch bản kiểm thử Pytest)"))
+    body.append(_bullet("CHƯƠNG 4: THỰC NGHIỆM, CÀI ĐẶT VÀ KIỂM THỬ (Tiền xử lý MovieLens, Kết quả thực nghiệm AI & 18 kịch bản kiểm thử Pytest)"))
     body.append(_bullet("CHƯƠNG 5: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN"))
 
     # Chương 1
@@ -201,12 +201,12 @@ def build_report() -> Path:
     body.append(_table(
         ["Thành phần", "Công nghệ / Thư viện", "Vai trò trong hệ thống"],
         [
-            ["Frontend", "ReactJS 18, Vite, HTML5, CSS3, JavaScript", "Giao diện khám phá phim, xem Trailer YouTube, chấm điểm, viết bình luận, Phòng thí nghiệm đối chiếu 3 mô hình song song, Mood Matcher, Dashboard cá nhân và cổng Admin"],
+            ["Frontend", "ReactJS 18, Vite, HTML5, CSS3, JavaScript", "Giao diện khám phá phim, Phòng chiếu phim đa Server (Theater Mode), Bảng xếp hạng Trọng số Bayes động, Đối chiếu AI giữa 2 bộ phim (Double Feature), Phòng thí nghiệm 3 mô hình song song, Làm mờ chống Spoiler, Sao lưu JSON và cổng Admin"],
             ["Backend API", "Python, FastAPI, REST API, Pydantic v2", "Cung cấp dịch vụ API, kiểm tra dữ liệu đầu vào và phục vụ suy luận AI"],
             ["Cơ sở dữ liệu & ORM", "PostgreSQL / SQLite, SQLAlchemy 2.0, Alembic", "Thiết kế 14 bảng quan hệ chuẩn hóa và quản lý phiên bản lược đồ CSDL"],
             ["Bảo mật & Phân quyền", "JWT (HS256), Bcrypt RBAC", "Xác thực bằng token JWT và phân quyền theo vai trò Người dùng (user) / Quản trị viên (admin)"],
             ["AI & Xử lý dữ liệu", "Pandas, NumPy, SciPy, Scikit-learn, Scikit-surprise", "Làm sạch bộ dữ liệu MovieLens, huấn luyện Popularity, Item-based KNN, SVD và đánh giá độ đo"],
-            ["Công cụ hỗ trợ", "Matplotlib, Pytest, Git/GitHub, Docker Compose", "Trực quan hóa kết quả thực nghiệm, kiểm thử 16 test cases và quản lý mã nguồn"],
+            ["Công cụ hỗ trợ", "Matplotlib, Pytest, Git/GitHub, Docker Compose", "Trực quan hóa kết quả thực nghiệm, kiểm thử 18 test cases và quản lý mã nguồn"],
         ],
     ))
 
@@ -269,7 +269,7 @@ def build_report() -> Path:
         register_img(exp_fig_dir / "ranking_metrics.png", "Hình 4.5: So sánh chất lượng danh sách gợi ý Precision@10 và Recall@10.")
         register_img(exp_fig_dir / "validation_grid.png", "Hình 4.6: Kết quả tinh chỉnh siêu tham số (Grid Search) trên tập Validation.")
 
-    body.append(_h2("4.3. Kết quả kiểm thử tự động hệ thống (16/16 Pytest Passed)"))
+    body.append(_h2("4.3. Kết quả kiểm thử tự động hệ thống (18/18 Pytest Passed)"))
     body.append(_table(
         ["Nhóm kiểm thử", "Kịch bản kiểm thử chính", "Kết quả"],
         [
@@ -278,13 +278,15 @@ def build_report() -> Path:
             ["Kiểm thử Xác thực & Phân quyền", "Đăng ký, đăng nhập JWT, chặn truy cập trái phép vào các API /api/admin/* (401/403)", "PASSED"],
             ["Kiểm thử Cá nhân hóa & Cold-start", "Kiểm chứng 2 người dùng khác gu nhận gợi ý khác nhau, loại trừ phim đã xem, tự động chuyển nhánh", "PASSED"],
             ["Kiểm thử Bình luận Cộng đồng", "Lưu đồng thời điểm đánh giá + bình luận văn bản và truy xuất danh sách review theo phim", "PASSED"],
+            ["Kiểm thử Bảng xếp hạng Bayes & Đối chiếu 2 phim", "Kiểm tra API /api/leaderboard tùy biến tham số m và API /api/movies/{id}/compare/{other_id}", "PASSED"],
+            ["Kiểm thử Nhật ký Telemetry AI & Kiểm duyệt", "Kiểm tra ghi nhận lịch sử phục vụ gợi ý /api/admin/recommendation-logs và gỡ bình luận vi phạm", "PASSED"],
             ["Kiểm thử Quản trị & Huấn luyện lại", "Kích hoạt huấn luyện mô hình mới từ Admin và khôi phục (Rollback) phiên bản mô hình cũ", "PASSED"],
         ],
     ))
 
     # Chương 5
     body.append(_h1("CHƯƠNG 5: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN"))
-    body.append(_p("Đồ án đã xây dựng hoàn chỉnh hệ thống gợi ý phim cá nhân hóa kết hợp Item-based KNN và SVD trên nền tảng FastAPI, ReactJS và SQLAlchemy/PostgreSQL, vượt qua 16/16 bài kiểm thử tự động Pytest. Trong tương lai, hệ thống có thể mở rộng thêm Content-based Filtering sử dụng vector nhúng ngữ nghĩa (Embeddings) và triển khai trên hạ tầng đám mây với Docker Compose."))
+    body.append(_p("Đồ án đã xây dựng hoàn chỉnh hệ thống gợi ý phim cá nhân hóa kết hợp Item-based KNN và SVD trên nền tảng FastAPI, ReactJS và SQLAlchemy/PostgreSQL, vượt qua 18/18 bài kiểm thử tự động Pytest. Trong tương lai, hệ thống có thể mở rộng thêm Content-based Filtering sử dụng vector nhúng ngữ nghĩa (Embeddings) và triển khai trên hạ tầng đám mây với Docker Compose."))
 
     document_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
